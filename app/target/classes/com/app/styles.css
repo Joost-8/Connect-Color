@@ -1,0 +1,38 @@
+/* Outer rectangle (the cell background) */
+.cell-outer {
+    -fx-fill: #1e1e1e;           /* dark gray background */
+    -fx-stroke: #555555;         /* subtle border */
+    -fx-stroke-width: 2;         /* border thickness */
+    -fx-arc-width: 12;           /* rounded corners */
+    -fx-arc-height: 12;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 2, 0.5, 0, 1);
+    -fx-cursor: hand;            /* pointer cursor on hover */
+}
+
+/* Inner rectangle (the colored line) */
+.cell-inner {
+    -fx-fill: transparent;       /* default empty cell */
+    -fx-arc-width: 8;            /* match rounded corners nicely */
+    -fx-arc-height: 8;
+}
+
+/* Optional: hover effect on outer rectangle */
+.cell-outer:hover {
+    -fx-stroke: #aaaaaa;
+    -fx-fill: #2a2a2a;
+}
+
+/* Endpoint circle */
+.cell-endpoint {
+    -fx-stroke: rgba(255,255,255,0.8);
+    -fx-stroke-width: 2;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.4), 4, 0.5, 0, 1);
+}
+
+.cell-path {
+    -fx-stroke-width: 14;            /* tune based on cell size */
+    -fx-stroke-line-cap: round;
+    -fx-stroke-line-join: round;
+    -fx-fill: transparent;
+}
+
