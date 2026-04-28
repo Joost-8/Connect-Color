@@ -9,6 +9,7 @@ import java.util.Set;
 import java.util.List;
 import java.util.Map;
 import com.connectcolor.Util.Dir;
+import com.connectcolor.Util.GameSettings;
 
 
 
@@ -24,6 +25,10 @@ public class Board {
     private Random rng = new Random();
     private final Map<CellState, ArrayList<Cell>> playerPaths = new HashMap<>();
     private final Set<CellState> finishedColors = new HashSet<>();
+
+    public Board(GameSettings settings) {
+        this(settings.getRows(), settings.getCols(), settings.getPairs());
+    }
 
     public Board(int rows, int cols, int pairs) {
         this.rows = rows;

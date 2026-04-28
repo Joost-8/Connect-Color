@@ -11,6 +11,7 @@ import javafx.scene.layout.StackPane;
 import com.connectcolor.Model.BoardListener;
 import com.connectcolor.Util.CellState;
 import com.connectcolor.Util.Dir;
+import com.connectcolor.Util.GameSettings;
 
 import java.util.ArrayList;
 
@@ -23,6 +24,10 @@ public class BoardPanel extends GridPane {
     private final int size;
     private ArrayList<BoardListener> listeners = new ArrayList<>();
 
+
+    public BoardPanel(GameSettings settings) {
+        this(settings.getRows(), settings.getCols(), settings.getCellSize());
+    }
 
     public BoardPanel(int rows, int cols, int size) {
         this.rows = rows;

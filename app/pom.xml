@@ -8,6 +8,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.source>11</maven.compiler.source>
         <maven.compiler.target>11</maven.compiler.target>
+        <build.output.root>${user.home}/.connect-color-build/${project.groupId}/${project.artifactId}</build.output.root>
     </properties>
     <dependencies>
         <dependency>
@@ -22,6 +23,7 @@
         </dependency>
     </dependencies>
     <build>
+        <directory>${build.output.root}</directory>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -38,10 +40,10 @@
                 <executions>
                     <execution>
                         <!-- Default configuration for running -->
-                        <!-- Usage: mvn clean javafx:run -->
+                        <!-- Usage: mvn -pl app javafx:run -->
                         <id>default-cli</id>
                         <configuration>
-                            <mainClass>com.app.App</mainClass>
+                            <mainClass>com.connectcolor.App</mainClass>
                         </configuration>
                     </execution>
                 </executions>

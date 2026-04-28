@@ -93,7 +93,7 @@ public class CellView {
 
         double S = this.size;       // store size in CellView field
         double cx = S / 2.0, cy = S / 2.0;
-        double m = S * 0.08;
+        double m = S * 0.09;
 
         // End-cap (only one connection)
         if (prev != null && next == null) {

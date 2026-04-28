@@ -1,0 +1,32 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Compile Connect Color",
+            "type": "shell",
+            "command": "mvn",
+            "args": [
+                "-pl",
+                "app",
+                "compile"
+            ],
+            "group": "build",
+            "problemMatcher": "$javac"
+        },
+        {
+            "label": "Run Connect Color",
+            "type": "shell",
+            "command": "mvn",
+            "args": [
+                "-pl",
+                "app",
+                "javafx:run"
+            ],
+            "group": {
+                "kind": "test",
+                "isDefault": true
+            },
+            "problemMatcher": []
+        }
+    ]
+}

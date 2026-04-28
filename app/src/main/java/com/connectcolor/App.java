@@ -15,6 +15,7 @@ import com.connectcolor.Model.Cell;
 import javafx.scene.input.KeyCode;
 import java.io.IOException;
 import com.connectcolor.Util.Dir;
+import com.connectcolor.Util.GameSettings;
 
 /**
  * JavaFX App
@@ -26,12 +27,13 @@ public class App extends Application {
     @Override
     public void start(Stage stage) throws IOException {
 
-        Board board = new Board(12, 12, 12);
-        BoardPanel boardPanel = new BoardPanel(12, 12, 70);
+        GameSettings settings = GameSettings.expert();
+        Board board = new Board(settings);
+        BoardPanel boardPanel = new BoardPanel(settings);
         boardPanel.setAlignment(Pos.CENTER);
 
 
-        scene = new Scene(boardPanel, 800, 800);
+        scene = new Scene(boardPanel, settings.getSceneWidth(), settings.getSceneHeight());
         scene.getStylesheets().add(
         App.class.getResource("/com/app/styles.css").toExternalForm()
         );
