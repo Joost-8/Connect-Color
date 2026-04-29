@@ -35,11 +35,19 @@ public class Board {
         this(settings.getRows(), settings.getCols(), settings.getPairs(), seed);
     }
 
+    public Board(GameSettings settings, List<EndpointPair> endpointPairs) {
+        this(settings.getRows(), settings.getCols(), settings.getPairs(), null, endpointPairs);
+    }
+
     public Board(int rows, int cols, int pairs) {
-        this(rows, cols, pairs, null);
+        this(rows, cols, pairs, null, null);
     }
 
     public Board(int rows, int cols, int pairs, Long seed) {
+        this(rows, cols, pairs, seed, null);
+    }
+
+    private Board(int rows, int cols, int pairs, Long seed, List<EndpointPair> endpointPairs) {
         this.rows = rows;
         this.cols = cols;
         this.grid = new Cell[rows][cols];
@@ -52,7 +60,11 @@ public class Board {
             }
         }
 
-        setBoard();
+        if (endpointPairs == null) {
+            setBoard();
+        } else {
+            setBoard(endpointPairs);
+        }
 
     }
 
@@ -169,6 +181,21 @@ public class Board {
 
     //add notifiers
     public void setBoard() {
+        prepareForNewBoard();
+
+        // 1. Generate puzzle grid
+        long seed = puzzleSeed != null ? puzzleSeed : rng.nextLong();
+        Grid puzzle = NumberlinkGenerator.generateUnique(cols, rows, seed, pairs);
+        List<EndpointPair> endpointPairs = NumberlinkGenerator.extractEndpointPairs(puzzle);
+        placeEndpointPairs(endpointPairs);
+    }
+
+    public void setBoard(List<EndpointPair> endpointPairs) {
+        prepareForNewBoard();
+        placeEndpointPairs(endpointPairs);
+    }
+
+    private void prepareForNewBoard() {
         clearSolutions();
         resetBoard();
         clearParents();
@@ -181,11 +208,10 @@ public class Board {
                 "Not enough colors for requested pairs=" + pairs + ", available=" + availableColors
             );
         }
+    }
 
-        // 1. Generate puzzle grid
-        long seed = puzzleSeed != null ? puzzleSeed : rng.nextLong();
-        Grid puzzle = NumberlinkGenerator.generateUnique(cols, rows, seed, pairs);
-        List<EndpointPair> endpointPairs = NumberlinkGenerator.extractEndpointPairs(puzzle);
+    private void placeEndpointPairs(List<EndpointPair> endpointPairs) {
+        int availableColors = CellState.getColorStates().size();
         if (endpointPairs.size() > availableColors) {
             throw new IllegalStateException(
                 "Not enough colors for generated pairs=" + endpointPairs.size()
@@ -199,7 +225,6 @@ public class Board {
             );
         }
 
-        // 2. Assign colors + mark fixed endpoints
         int colorIdx = 0;
         fixedCells.clear();
 

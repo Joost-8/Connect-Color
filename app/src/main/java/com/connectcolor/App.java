@@ -1,9 +1,9 @@
 package com.connectcolor;
 
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.fxml.FXMLLoader;
 import javafx.animation.PauseTransition;
-import javafx.concurrent.Task;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Parent;
@@ -21,10 +21,13 @@ import com.connectcolor.Model.Board;
 import com.connectcolor.Controllers.PrimaryController;
 import com.connectcolor.Model.Cell;
 import java.io.IOException;
+import java.util.HashSet;
+import java.util.Set;
+
 import com.connectcolor.Util.Difficulty;
 import com.connectcolor.Util.GameSettings;
-import com.connectcolor.Util.LevelSeed;
 import com.connectcolor.Util.ProgressStore;
+import com.connectcolor.Model.PuzzlePreloader;
 
 /**
  * JavaFX App
@@ -36,6 +39,7 @@ public class App extends Application {
     private BorderPane root;
     private Label levelLabel;
     private ProgressStore progressStore;
+    private PuzzlePreloader puzzlePreloader;
     private Difficulty currentDifficulty;
     private int currentLevel;
     private int loadRequestId;
@@ -44,6 +48,7 @@ public class App extends Application {
     public void start(Stage stage) throws IOException {
         this.stage = stage;
         this.progressStore = new ProgressStore();
+        this.puzzlePreloader = new PuzzlePreloader();
         this.currentDifficulty = progressStore.getSelectedDifficulty();
         this.currentLevel = progressStore.getLevel(currentDifficulty);
 
@@ -58,8 +63,16 @@ public class App extends Application {
         stage.setScene(scene);
         stage.setTitle("Connect Color");
 
+        queueInitialPreloads();
         showMainMenu();
         stage.show();
+    }
+
+    @Override
+    public void stop() {
+        if (puzzlePreloader != null) {
+            puzzlePreloader.shutdown();
+        }
     }
 
     private void showMainMenu() {
@@ -99,6 +112,7 @@ public class App extends Application {
         currentLevel = progressStore.getLevel(currentDifficulty);
         progressStore.setSelectedDifficulty(currentDifficulty);
         progressStore.save();
+        puzzlePreloader.preloadAround(currentDifficulty, currentLevel, 10);
         loadLevel(currentDifficulty);
     }
 
@@ -120,36 +134,24 @@ public class App extends Application {
 
     private void loadLevel(Difficulty difficulty) {
         GameSettings settings = GameSettings.forDifficulty(difficulty);
-        long seed = LevelSeed.forLevel(difficulty, currentLevel);
         int level = currentLevel;
         int requestId = ++loadRequestId;
 
-        showLoading(difficulty, level);
+        var boardFuture = puzzlePreloader.loadBoard(difficulty, level);
+        if (!boardFuture.isDone()) {
+            showLoading(difficulty, level);
+        }
 
-        Task<Board> loadTask = new Task<>() {
-            @Override
-            protected Board call() {
-                return new Board(settings, seed);
-            }
-        };
-
-        loadTask.setOnSucceeded(e -> {
+        boardFuture.whenComplete((board, error) -> Platform.runLater(() -> {
             if (requestId != loadRequestId) {
                 return;
             }
-            showLoadedBoard(difficulty, level, settings, loadTask.getValue());
-        });
-
-        loadTask.setOnFailed(e -> {
-            if (requestId != loadRequestId) {
+            if (error != null) {
+                showLoadError(error);
                 return;
             }
-            showLoadError(loadTask.getException());
-        });
-
-        Thread thread = new Thread(loadTask, "connect-color-level-loader");
-        thread.setDaemon(true);
-        thread.start();
+            showLoadedBoard(difficulty, level, settings, board);
+        }));
     }
 
     private void showLoadedBoard(Difficulty difficulty, int level, GameSettings settings, Board board) {
@@ -235,6 +237,7 @@ public class App extends Application {
         currentLevel = progressStore.incrementLevel(currentDifficulty);
         progressStore.setSelectedDifficulty(currentDifficulty);
         progressStore.save();
+        puzzlePreloader.preloadAround(currentDifficulty, currentLevel, 10);
 
         PauseTransition pause = new PauseTransition(Duration.millis(450));
         pause.setOnFinished(e -> loadLevel(currentDifficulty));
@@ -243,6 +246,21 @@ public class App extends Application {
 
     private void updateTopBar() {
         levelLabel.setText(currentDifficulty + " - Level " + currentLevel);
+    }
+
+    private void queueInitialPreloads() {
+        Set<Difficulty> queued = new HashSet<>();
+        queuePreload(currentDifficulty, queued);
+        queuePreload(Difficulty.HARD, queued);
+        for (Difficulty difficulty : Difficulty.values()) {
+            queuePreload(difficulty, queued);
+        }
+    }
+
+    private void queuePreload(Difficulty difficulty, Set<Difficulty> queued) {
+        if (queued.add(difficulty)) {
+            puzzlePreloader.preloadAround(difficulty, progressStore.getLevel(difficulty), 10);
+        }
     }
 
     static void setRoot(String fxml) throws IOException {
