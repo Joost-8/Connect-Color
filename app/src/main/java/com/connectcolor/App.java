@@ -6,12 +6,11 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
-import javafx.scene.control.ComboBox;
+import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
-import javafx.scene.layout.Priority;
-import javafx.scene.layout.Region;
+import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import com.connectcolor.View.BoardPanel;
 import com.connectcolor.Model.Board;
@@ -32,11 +31,9 @@ public class App extends Application {
     private Stage stage;
     private BorderPane root;
     private Label levelLabel;
-    private ComboBox<Difficulty> difficultyBox;
     private ProgressStore progressStore;
     private Difficulty currentDifficulty;
     private int currentLevel;
-    private boolean updatingDifficulty;
 
     @Override
     public void start(Stage stage) throws IOException {
@@ -47,7 +44,6 @@ public class App extends Application {
 
         root = new BorderPane();
         root.getStyleClass().add("app-root");
-        root.setTop(createTopBar());
 
         scene = new Scene(root);
         scene.getStylesheets().add(
@@ -57,38 +53,59 @@ public class App extends Application {
         stage.setScene(scene);
         stage.setTitle("Connect Color");
 
-        loadLevel(currentDifficulty);
+        showMainMenu();
         stage.show();
     }
 
-    private HBox createTopBar() {
+    private void showMainMenu() {
+        root.setTop(null);
+
+        Label title = new Label("Connect Color");
+        title.getStyleClass().add("menu-title");
+
+        VBox difficultyList = new VBox(12);
+        difficultyList.setAlignment(Pos.CENTER);
+
+        for (Difficulty difficulty : Difficulty.values()) {
+            Button button = new Button(difficulty + " - Level " + progressStore.getLevel(difficulty));
+            button.getStyleClass().add("menu-button");
+            button.setMaxWidth(Double.MAX_VALUE);
+            button.setFocusTraversable(false);
+            button.setOnAction(e -> startDifficulty(difficulty));
+            difficultyList.getChildren().add(button);
+        }
+
+        VBox menu = new VBox(28, title, difficultyList);
+        menu.getStyleClass().add("main-menu");
+        menu.setAlignment(Pos.CENTER);
+        menu.setPadding(new Insets(32));
+
+        root.setCenter(menu);
+        root.setPrefSize(520, 620);
+
+        if (stage != null) {
+            stage.sizeToScene();
+        }
+    }
+
+    private void startDifficulty(Difficulty difficulty) {
+        currentDifficulty = difficulty;
+        currentLevel = progressStore.getLevel(currentDifficulty);
+        progressStore.setSelectedDifficulty(currentDifficulty);
+        progressStore.save();
+        loadLevel(currentDifficulty);
+    }
+
+    private HBox createGameTopBar() {
+        Button backButton = new Button("Back");
+        backButton.getStyleClass().add("back-button");
+        backButton.setFocusTraversable(false);
+        backButton.setOnAction(e -> showMainMenu());
+
         levelLabel = new Label();
         levelLabel.getStyleClass().add("level-label");
 
-        Region spacer = new Region();
-        HBox.setHgrow(spacer, Priority.ALWAYS);
-
-        difficultyBox = new ComboBox<>();
-        difficultyBox.getItems().setAll(Difficulty.values());
-        difficultyBox.setValue(currentDifficulty);
-        difficultyBox.setFocusTraversable(false);
-        difficultyBox.setOnAction(e -> {
-            if (updatingDifficulty) {
-                return;
-            }
-            Difficulty selected = difficultyBox.getValue();
-            if (selected == null || selected == currentDifficulty) {
-                return;
-            }
-
-            currentDifficulty = selected;
-            currentLevel = progressStore.getLevel(currentDifficulty);
-            progressStore.setSelectedDifficulty(currentDifficulty);
-            progressStore.save();
-            loadLevel(currentDifficulty);
-        });
-
-        HBox topBar = new HBox(12, levelLabel, spacer, difficultyBox);
+        HBox topBar = new HBox(14, backButton, levelLabel);
         topBar.getStyleClass().add("top-bar");
         topBar.setAlignment(Pos.CENTER);
         topBar.setPadding(new Insets(10, 14, 10, 14));
@@ -109,6 +126,7 @@ public class App extends Application {
 
         repaintFixedCells(board, boardPanel);
 
+        root.setTop(createGameTopBar());
         root.setCenter(boardPanel);
         root.setPrefSize(settings.getSceneWidth(), settings.getSceneHeight() + 48);
         updateTopBar();
@@ -139,10 +157,7 @@ public class App extends Application {
     }
 
     private void updateTopBar() {
-        levelLabel.setText("Level " + currentLevel);
-        updatingDifficulty = true;
-        difficultyBox.setValue(currentDifficulty);
-        updatingDifficulty = false;
+        levelLabel.setText(currentDifficulty + " - Level " + currentLevel);
     }
 
     static void setRoot(String fxml) throws IOException {

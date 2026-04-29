@@ -12,6 +12,39 @@
     -fx-font-weight: bold;
 }
 
+.main-menu {
+    -fx-background-color: #111111;
+}
+
+.menu-title {
+    -fx-text-fill: white;
+    -fx-font-size: 38;
+    -fx-font-weight: bold;
+}
+
+.menu-button,
+.back-button {
+    -fx-background-color: #242424;
+    -fx-border-color: #555555;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+    -fx-text-fill: white;
+    -fx-font-size: 16;
+    -fx-font-weight: bold;
+    -fx-padding: 10 18;
+    -fx-cursor: hand;
+}
+
+.menu-button {
+    -fx-min-width: 260;
+}
+
+.menu-button:hover,
+.back-button:hover {
+    -fx-background-color: #333333;
+    -fx-border-color: #888888;
+}
+
 .combo-box {
     -fx-background-color: #242424;
     -fx-border-color: #555555;

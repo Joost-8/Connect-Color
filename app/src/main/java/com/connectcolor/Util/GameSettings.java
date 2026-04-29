@@ -25,10 +25,6 @@ public final class GameSettings {
         return Difficulty.HARD.createSettings();
     }
 
-    public static GameSettings expert() {
-        return Difficulty.EXPERT.createSettings();
-    }
-
     public static GameSettings forDifficulty(Difficulty difficulty) {
         return difficulty.createSettings();
     }

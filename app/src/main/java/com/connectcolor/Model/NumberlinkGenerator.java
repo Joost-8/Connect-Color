@@ -107,11 +107,22 @@ public final class NumberlinkGenerator {
         int minNumbers = (n * 2) / 3;
         int maxNumbers = (n * 3) / 2;
 
+        return generate(w, h, seed, minNumbers, maxNumbers);
+    }
+
+    public static Grid generate(int w, int h, long seed, int minPairs, int maxPairs) {
+        if (w < 4 || h < 4) {
+            throw new IllegalArgumentException("Width/height must be >= 4");
+        }
+        if (minPairs <= 0 || maxPairs < minPairs) {
+            throw new IllegalArgumentException("Invalid pair range: " + minPairs + ".." + maxPairs);
+        }
+
         Mitm mitm = new Mitm(2, 1, seed);
         mitm.prepare(Math.min(20, Math.max(h, 6)));
 
         Random rng = new Random(seed ^ 0x9E3779B97F4A7C15L);
-        return make(w, h, mitm, minNumbers, maxNumbers, rng);
+        return make(w, h, mitm, minPairs, maxPairs, rng);
     }
 
     public static Grid generateUnique(int w, int h, long seed) {
@@ -133,10 +144,72 @@ public final class NumberlinkGenerator {
             long solverNodeLimit,
             long solverTimeoutMillis) {
 
+        return generateUniqueInRange(
+            w,
+            h,
+            seed,
+            maxCandidates,
+            solverNodeLimit,
+            solverTimeoutMillis,
+            0,
+            0
+        );
+    }
+
+    public static Grid generateUnique(int w, int h, long seed, int requiredPairs) {
+        return generateUnique(
+            w,
+            h,
+            seed,
+            requiredPairs,
+            UNIQUE_MAX_CANDIDATES,
+            UNIQUE_SOLVER_NODE_LIMIT,
+            UNIQUE_SOLVER_TIMEOUT_MILLIS
+        );
+    }
+
+    public static Grid generateUnique(
+            int w,
+            int h,
+            long seed,
+            int requiredPairs,
+            int maxCandidates,
+            long solverNodeLimit,
+            long solverTimeoutMillis) {
+
+        if (requiredPairs <= 0) {
+            throw new IllegalArgumentException("requiredPairs must be positive");
+        }
+
+        return generateUniqueInRange(
+            w,
+            h,
+            seed,
+            maxCandidates,
+            solverNodeLimit,
+            solverTimeoutMillis,
+            requiredPairs,
+            requiredPairs
+        );
+    }
+
+    private static Grid generateUniqueInRange(
+            int w,
+            int h,
+            long seed,
+            int maxCandidates,
+            long solverNodeLimit,
+            long solverTimeoutMillis,
+            int minPairs,
+            int maxPairs) {
+
         long seedStep = 0x9E3779B97F4A7C15L;
 
         for (int attempt = 0; attempt < maxCandidates; attempt++) {
-            Grid candidate = generate(w, h, seed + seedStep * attempt);
+            long candidateSeed = seed + seedStep * attempt;
+            Grid candidate = minPairs > 0
+                    ? generate(w, h, candidateSeed, minPairs, maxPairs)
+                    : generate(w, h, candidateSeed);
             List<EndpointPair> endpointPairs = extractEndpointPairs(candidate);
 
             NumberlinkSolver.CountResult result = NumberlinkSolver.countSolutions(
@@ -156,7 +229,9 @@ public final class NumberlinkGenerator {
         throw new IllegalStateException(
             "Could not generate a unique full-cover Numberlink puzzle after "
             + maxCandidates
-            + " candidates."
+            + " candidates"
+            + (minPairs > 0 ? " with pairs=" + minPairs : "")
+            + "."
         );
     }
 

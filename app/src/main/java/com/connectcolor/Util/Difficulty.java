@@ -3,8 +3,7 @@ package com.connectcolor.Util;
 public enum Difficulty {
     EASY("Easy", "easy", 6, 6, 5, 90),
     MEDIUM("Medium", "medium", 8, 8, 7, 80),
-    HARD("Hard", "hard", 10, 10, 9, 75),
-    EXPERT("Expert", "expert", 12, 12, 12, 70);
+    HARD("Hard", "hard", 10, 10, 9, 75);
 
     private final String displayName;
     private final String key;

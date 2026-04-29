@@ -175,10 +175,29 @@ public class Board {
         playerPaths.clear();
         finishedColors.clear();
 
+        int availableColors = CellState.getColorStates().size();
+        if (pairs > availableColors) {
+            throw new IllegalStateException(
+                "Not enough colors for requested pairs=" + pairs + ", available=" + availableColors
+            );
+        }
+
         // 1. Generate puzzle grid
         long seed = puzzleSeed != null ? puzzleSeed : rng.nextLong();
-        Grid puzzle = NumberlinkGenerator.generateUnique(cols, rows, seed);
+        Grid puzzle = NumberlinkGenerator.generateUnique(cols, rows, seed, pairs);
         List<EndpointPair> endpointPairs = NumberlinkGenerator.extractEndpointPairs(puzzle);
+        if (endpointPairs.size() > availableColors) {
+            throw new IllegalStateException(
+                "Not enough colors for generated pairs=" + endpointPairs.size()
+                + ", available=" + availableColors
+            );
+        }
+        if (endpointPairs.size() != pairs) {
+            throw new IllegalStateException(
+                "Generated puzzle has pairs=" + endpointPairs.size()
+                + ", expected=" + pairs
+            );
+        }
 
         // 2. Assign colors + mark fixed endpoints
         int colorIdx = 0;

@@ -57,14 +57,13 @@ class ProgressStoreTest {
         assertEquals(1, store.getLevel(Difficulty.EASY));
         assertEquals(1, store.getLevel(Difficulty.MEDIUM));
         assertEquals(4, store.getLevel(Difficulty.HARD));
-        assertEquals(1, store.getLevel(Difficulty.EXPERT));
     }
 
     @Test
     void incrementLevelSavesNextLevelInMemory() {
         ProgressStore store = new ProgressStore(tempDir.resolve("progress.properties"));
 
-        assertEquals(2, store.incrementLevel(Difficulty.EXPERT));
-        assertEquals(2, store.getLevel(Difficulty.EXPERT));
+        assertEquals(2, store.incrementLevel(Difficulty.HARD));
+        assertEquals(2, store.getLevel(Difficulty.HARD));
     }
 }

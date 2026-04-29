@@ -2,10 +2,16 @@ package com.connectcolor.Model;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
+
+import com.connectcolor.Util.CellState;
+import com.connectcolor.Util.Difficulty;
+import com.connectcolor.Util.GameSettings;
+import com.connectcolor.Util.LevelSeed;
 
 class NumberlinkSolverTest {
     @Test
@@ -47,6 +53,18 @@ class NumberlinkSolverTest {
     }
 
     @Test
+    void countsMultipleHamiltonianPathsOnLargerOpenGrid() {
+        List<EndpointPair> pairs = List.of(
+            new EndpointPair(0, 0, 0, 3, 2)
+        );
+
+        assertEquals(
+            NumberlinkSolver.CountResult.MULTIPLE,
+            NumberlinkSolver.countSolutions(4, 4, pairs, 2, 1_000_000L, 1_000L)
+        );
+    }
+
+    @Test
     void directConnectionThatLeavesCellsUnusedDoesNotCount() {
         List<EndpointPair> pairs = List.of(
             new EndpointPair(0, 0, 0, 0, 1)
@@ -55,6 +73,18 @@ class NumberlinkSolverTest {
         assertEquals(
             NumberlinkSolver.CountResult.ZERO,
             NumberlinkSolver.countSolutions(3, 3, pairs, 2, 1_000_000L, 1_000L)
+        );
+    }
+
+    @Test
+    void solverReportsUnknownWhenSearchLimitPreventsProof() {
+        List<EndpointPair> pairs = List.of(
+            new EndpointPair(0, 0, 0, 2, 2)
+        );
+
+        assertEquals(
+            NumberlinkSolver.CountResult.UNKNOWN_LIMIT,
+            NumberlinkSolver.countSolutions(3, 3, pairs, 2, 1L, 1_000L)
         );
     }
 
@@ -86,5 +116,65 @@ class NumberlinkSolverTest {
             NumberlinkSolver.CountResult.ONE,
             NumberlinkSolver.countSolutions(8, 8, pairs, 2, 1_000_000L, 1_000L)
         );
+    }
+
+    @Test
+    void generatorHonorsExactDifficultyPairCounts() {
+        for (Difficulty difficulty : Difficulty.values()) {
+            GameSettings settings = difficulty.createSettings();
+            long seed = LevelSeed.forLevel(difficulty, 1);
+
+            Grid puzzle = NumberlinkGenerator.generate(
+                settings.getCols(),
+                settings.getRows(),
+                seed,
+                settings.getPairs(),
+                settings.getPairs()
+            );
+
+            assertEquals(
+                settings.getPairs(),
+                NumberlinkGenerator.extractEndpointPairs(puzzle).size(),
+                difficulty + " should use its configured pair count"
+            );
+        }
+    }
+
+    @Test
+    void hardPairCountFitsAvailableColors() {
+        assertTrue(Difficulty.HARD.createSettings().getPairs() <= CellState.getColorStates().size());
+
+        GameSettings settings = Difficulty.HARD.createSettings();
+        Grid puzzle = NumberlinkGenerator.generate(
+            settings.getCols(),
+            settings.getRows(),
+            LevelSeed.forLevel(Difficulty.HARD, 1),
+            settings.getPairs(),
+            settings.getPairs()
+        );
+
+        assertEquals(settings.getPairs(), NumberlinkGenerator.extractEndpointPairs(puzzle).size());
+    }
+
+    @Test
+    void earlyMediumLevelsAreStrictlyUnique() {
+        GameSettings settings = Difficulty.MEDIUM.createSettings();
+
+        for (int level = 1; level <= 2; level++) {
+            Grid puzzle = NumberlinkGenerator.generateUnique(
+                settings.getCols(),
+                settings.getRows(),
+                LevelSeed.forLevel(Difficulty.MEDIUM, level),
+                settings.getPairs()
+            );
+            List<EndpointPair> pairs = NumberlinkGenerator.extractEndpointPairs(puzzle);
+
+            assertEquals(settings.getPairs(), pairs.size());
+            assertEquals(
+                NumberlinkSolver.CountResult.ONE,
+                NumberlinkSolver.countSolutions(settings.getRows(), settings.getCols(), pairs, 2, 1_000_000L, 1_000L),
+                "Medium level " + level + " should have one full-cover solution"
+            );
+        }
     }
 }
