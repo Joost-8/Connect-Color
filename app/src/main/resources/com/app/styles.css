@@ -45,6 +45,21 @@
     -fx-border-color: #888888;
 }
 
+.loading-view {
+    -fx-background-color: #111111;
+}
+
+.loading-label {
+    -fx-text-fill: white;
+    -fx-font-size: 17;
+    -fx-font-weight: bold;
+}
+
+.loading-spinner {
+    -fx-pref-width: 42;
+    -fx-pref-height: 42;
+}
+
 .combo-box {
     -fx-background-color: #242424;
     -fx-border-color: #555555;

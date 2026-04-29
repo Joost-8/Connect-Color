@@ -2,16 +2,20 @@ package com.connectcolor;
 
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
+import javafx.animation.PauseTransition;
+import javafx.concurrent.Task;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.ProgressIndicator;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
+import javafx.util.Duration;
 import com.connectcolor.View.BoardPanel;
 import com.connectcolor.Model.Board;
 import com.connectcolor.Controllers.PrimaryController;
@@ -34,6 +38,7 @@ public class App extends Application {
     private ProgressStore progressStore;
     private Difficulty currentDifficulty;
     private int currentLevel;
+    private int loadRequestId;
 
     @Override
     public void start(Stage stage) throws IOException {
@@ -58,6 +63,7 @@ public class App extends Application {
     }
 
     private void showMainMenu() {
+        loadRequestId++;
         root.setTop(null);
 
         Label title = new Label("Connect Color");
@@ -115,8 +121,40 @@ public class App extends Application {
     private void loadLevel(Difficulty difficulty) {
         GameSettings settings = GameSettings.forDifficulty(difficulty);
         long seed = LevelSeed.forLevel(difficulty, currentLevel);
+        int level = currentLevel;
+        int requestId = ++loadRequestId;
 
-        Board board = new Board(settings, seed);
+        showLoading(difficulty, level);
+
+        Task<Board> loadTask = new Task<>() {
+            @Override
+            protected Board call() {
+                return new Board(settings, seed);
+            }
+        };
+
+        loadTask.setOnSucceeded(e -> {
+            if (requestId != loadRequestId) {
+                return;
+            }
+            showLoadedBoard(difficulty, level, settings, loadTask.getValue());
+        });
+
+        loadTask.setOnFailed(e -> {
+            if (requestId != loadRequestId) {
+                return;
+            }
+            showLoadError(loadTask.getException());
+        });
+
+        Thread thread = new Thread(loadTask, "connect-color-level-loader");
+        thread.setDaemon(true);
+        thread.start();
+    }
+
+    private void showLoadedBoard(Difficulty difficulty, int level, GameSettings settings, Board board) {
+        currentDifficulty = difficulty;
+        currentLevel = level;
         BoardPanel boardPanel = new BoardPanel(settings);
         boardPanel.setAlignment(Pos.CENTER);
 
@@ -133,6 +171,50 @@ public class App extends Application {
 
         if (stage != null) {
             stage.sizeToScene();
+        }
+    }
+
+    private void showLoading(Difficulty difficulty, int level) {
+        ProgressIndicator spinner = new ProgressIndicator();
+        spinner.getStyleClass().add("loading-spinner");
+
+        Label loadingLabel = new Label("Loading " + difficulty + " - Level " + level);
+        loadingLabel.getStyleClass().add("loading-label");
+
+        VBox loading = new VBox(14, spinner, loadingLabel);
+        loading.getStyleClass().add("loading-view");
+        loading.setAlignment(Pos.CENTER);
+        loading.setPadding(new Insets(32));
+
+        root.setTop(null);
+        root.setCenter(loading);
+        root.setPrefSize(520, 620);
+
+        if (stage != null) {
+            stage.sizeToScene();
+        }
+    }
+
+    private void showLoadError(Throwable error) {
+        Label message = new Label("Could not load puzzle");
+        message.getStyleClass().add("loading-label");
+
+        Button backButton = new Button("Back");
+        backButton.getStyleClass().add("back-button");
+        backButton.setFocusTraversable(false);
+        backButton.setOnAction(e -> showMainMenu());
+
+        VBox errorView = new VBox(16, message, backButton);
+        errorView.getStyleClass().add("loading-view");
+        errorView.setAlignment(Pos.CENTER);
+        errorView.setPadding(new Insets(32));
+
+        root.setTop(null);
+        root.setCenter(errorView);
+        root.setPrefSize(520, 620);
+
+        if (error != null) {
+            error.printStackTrace();
         }
     }
 
@@ -153,7 +235,10 @@ public class App extends Application {
         currentLevel = progressStore.incrementLevel(currentDifficulty);
         progressStore.setSelectedDifficulty(currentDifficulty);
         progressStore.save();
-        loadLevel(currentDifficulty);
+
+        PauseTransition pause = new PauseTransition(Duration.millis(450));
+        pause.setOnFinished(e -> loadLevel(currentDifficulty));
+        pause.play();
     }
 
     private void updateTopBar() {
