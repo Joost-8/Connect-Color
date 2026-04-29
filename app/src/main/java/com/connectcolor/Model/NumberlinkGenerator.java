@@ -1,6 +1,11 @@
 package com.connectcolor.Model;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 
@@ -10,6 +15,9 @@ public final class NumberlinkGenerator {
 
 
     private static final int LOOP_TRIES = 1000;
+    private static final int UNIQUE_MAX_CANDIDATES = 100;
+    private static final long UNIQUE_SOLVER_NODE_LIMIT = 1_000_000L;
+    private static final long UNIQUE_SOLVER_TIMEOUT_MILLIS = 1_000L;
 
 
     private static int id(int x, int y, int w) {
@@ -104,6 +112,101 @@ public final class NumberlinkGenerator {
 
         Random rng = new Random(seed ^ 0x9E3779B97F4A7C15L);
         return make(w, h, mitm, minNumbers, maxNumbers, rng);
+    }
+
+    public static Grid generateUnique(int w, int h, long seed) {
+        return generateUnique(
+            w,
+            h,
+            seed,
+            UNIQUE_MAX_CANDIDATES,
+            UNIQUE_SOLVER_NODE_LIMIT,
+            UNIQUE_SOLVER_TIMEOUT_MILLIS
+        );
+    }
+
+    public static Grid generateUnique(
+            int w,
+            int h,
+            long seed,
+            int maxCandidates,
+            long solverNodeLimit,
+            long solverTimeoutMillis) {
+
+        long seedStep = 0x9E3779B97F4A7C15L;
+
+        for (int attempt = 0; attempt < maxCandidates; attempt++) {
+            Grid candidate = generate(w, h, seed + seedStep * attempt);
+            List<EndpointPair> endpointPairs = extractEndpointPairs(candidate);
+
+            NumberlinkSolver.CountResult result = NumberlinkSolver.countSolutions(
+                h,
+                w,
+                endpointPairs,
+                2,
+                solverNodeLimit,
+                solverTimeoutMillis
+            );
+
+            if (result == NumberlinkSolver.CountResult.ONE) {
+                return candidate;
+            }
+        }
+
+        throw new IllegalStateException(
+            "Could not generate a unique full-cover Numberlink puzzle after "
+            + maxCandidates
+            + " candidates."
+        );
+    }
+
+    public static List<EndpointPair> extractEndpointPairs(Grid puzzle) {
+        TubeResult tr = puzzle.makeTubes();
+        Grid tubeGrid = tr.getTube();
+        UnionFind uf = tr.getUF();
+
+        Map<Integer, List<Integer>> endpointsByRoot = new HashMap<>();
+
+        for (int y = 0; y < puzzle.h; y++) {
+            for (int x = 0; x < puzzle.w; x++) {
+                if (tubeGrid.get(x, y) != 'x') continue;
+
+                int root = uf.find(id(x, y, puzzle.w));
+                endpointsByRoot
+                    .computeIfAbsent(root, k -> new ArrayList<>())
+                    .add(id(x, y, puzzle.w));
+            }
+        }
+
+        List<List<Integer>> endpointGroups = new ArrayList<>(endpointsByRoot.values());
+        for (List<Integer> group : endpointGroups) {
+            if (group.size() != 2) {
+                throw new IllegalStateException("Invalid endpoint count: " + group.size());
+            }
+            Collections.sort(group);
+        }
+
+        endpointGroups.sort((a, b) -> {
+            int first = Integer.compare(a.get(0), b.get(0));
+            if (first != 0) return first;
+            return Integer.compare(a.get(1), b.get(1));
+        });
+
+        List<EndpointPair> pairs = new ArrayList<>();
+        for (int i = 0; i < endpointGroups.size(); i++) {
+            List<Integer> group = endpointGroups.get(i);
+            int a = group.get(0);
+            int b = group.get(1);
+            pairs.add(new EndpointPair(
+                i,
+                a / puzzle.w,
+                a % puzzle.w,
+                b / puzzle.w,
+                b % puzzle.w
+            ));
+        }
+
+        return pairs;
     }
 
     /**

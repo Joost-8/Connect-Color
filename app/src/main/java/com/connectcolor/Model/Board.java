@@ -86,6 +86,18 @@ public class Board {
 
     } 
 
+    public boolean isSolved() {
+        if (!isFull()) return false;
+
+        for (CellState color : playerPaths.keySet()) {
+            if (!finishedColors.contains(color)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     public boolean isEmpty(int row, int col) {
         Cell cell = getCell(row, col);
         return cell.getPlayerState() == CellState.Empty;
@@ -155,42 +167,22 @@ public class Board {
 
         // 1. Generate puzzle grid
         long seed = rng.nextLong();
-        Grid puzzle = NumberlinkGenerator.generate(cols, rows, seed);
+        Grid puzzle = NumberlinkGenerator.generateUnique(cols, rows, seed);
+        List<EndpointPair> endpointPairs = NumberlinkGenerator.extractEndpointPairs(puzzle);
 
-        // 2. Build tubes + union-find
-        TubeResult tr = puzzle.makeTubes();
-        Grid tubeGrid = tr.getTube();
-        UnionFind uf = tr.getUF();
-
-        // 3. Group endpoint cells by component
-        Map<Integer, List<Cell>> endpointsByRoot = new HashMap<>();
-
-        for (int y = 0; y < rows; y++) {
-            for (int x = 0; x < cols; x++) {
-                if (tubeGrid.get(x, y) == 'x') {
-                    int root = uf.find(y * cols + x);
-
-                    endpointsByRoot
-                        .computeIfAbsent(root, k -> new ArrayList<>())
-                        .add(getCell(y, x)); // Board uses (row,col)
-                }
-            }
-        }
-
-        // 4. Assign colors + mark fixed endpoints
+        // 2. Assign colors + mark fixed endpoints
         int colorIdx = 0;
         fixedCells.clear();
 
-        for (List<Cell> pair : endpointsByRoot.values()) {
-            if (pair.size() != 2) {
-                throw new IllegalStateException("Invalid endpoint count: " + pair.size());
-            }
-
+        for (EndpointPair pair : endpointPairs) {
             CellState color = colorForIndex(colorIdx++);
             playerPaths.put(color, new ArrayList<>());
             finishedColors.remove(color);
 
-            for (Cell cell : pair) {
+            Cell first = getCell(pair.getStartRow(), pair.getStartCol());
+            Cell second = getCell(pair.getEndRow(), pair.getEndCol());
+
+            for (Cell cell : List.of(first, second)) {
                 cell.setFixed(true);
                 cell.setSolutionState(color);
                 cell.forcePlayerState(color); 
