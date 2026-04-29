@@ -23,6 +23,7 @@ public class Board {
     private ArrayList<Cell> fixedCells = new ArrayList<>();
     private Map<CellState, List<Cell>> solutionPaths = new HashMap<>();
     private Random rng = new Random();
+    private Long puzzleSeed;
     private final Map<CellState, ArrayList<Cell>> playerPaths = new HashMap<>();
     private final Set<CellState> finishedColors = new HashSet<>();
 
@@ -30,11 +31,20 @@ public class Board {
         this(settings.getRows(), settings.getCols(), settings.getPairs());
     }
 
+    public Board(GameSettings settings, long seed) {
+        this(settings.getRows(), settings.getCols(), settings.getPairs(), seed);
+    }
+
     public Board(int rows, int cols, int pairs) {
+        this(rows, cols, pairs, null);
+    }
+
+    public Board(int rows, int cols, int pairs, Long seed) {
         this.rows = rows;
         this.cols = cols;
         this.grid = new Cell[rows][cols];
         this.pairs = pairs;
+        this.puzzleSeed = seed;
         //algorithm for board randomizer method
         for (int i = 0; i < rows; i++) {
             for (int j = 0; j < cols; j++) {
@@ -166,7 +176,7 @@ public class Board {
         finishedColors.clear();
 
         // 1. Generate puzzle grid
-        long seed = rng.nextLong();
+        long seed = puzzleSeed != null ? puzzleSeed : rng.nextLong();
         Grid puzzle = NumberlinkGenerator.generateUnique(cols, rows, seed);
         List<EndpointPair> endpointPairs = NumberlinkGenerator.extractEndpointPairs(puzzle);
 

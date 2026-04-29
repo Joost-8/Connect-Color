@@ -6,7 +6,7 @@ public final class GameSettings {
     private final int pairs;
     private final int cellSize;
     
-    private GameSettings(int rows, int cols, int pairs, int cellSize) {
+    public GameSettings(int rows, int cols, int pairs, int cellSize) {
         this.rows = rows;
         this.cols = cols;
         this.pairs = pairs;
@@ -14,19 +14,23 @@ public final class GameSettings {
     }
 
     public static GameSettings easy() {
-        return new GameSettings(6, 6, 5, 90);
+        return Difficulty.EASY.createSettings();
     }
 
     public static GameSettings medium() {
-        return new GameSettings(8, 8, 7, 80);
+        return Difficulty.MEDIUM.createSettings();
     }
 
     public static GameSettings hard() {
-        return new GameSettings(10, 10, 9, 75);
+        return Difficulty.HARD.createSettings();
     }
 
     public static GameSettings expert() {
-        return new GameSettings(12, 12, 12, 70);
+        return Difficulty.EXPERT.createSettings();
+    }
+
+    public static GameSettings forDifficulty(Difficulty difficulty) {
+        return difficulty.createSettings();
     }
 
     public int getRows() {

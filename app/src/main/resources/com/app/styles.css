@@ -1,3 +1,29 @@
+.app-root {
+    -fx-background-color: #111111;
+}
+
+.top-bar {
+    -fx-background-color: #111111;
+}
+
+.level-label {
+    -fx-text-fill: white;
+    -fx-font-size: 18;
+    -fx-font-weight: bold;
+}
+
+.combo-box {
+    -fx-background-color: #242424;
+    -fx-border-color: #555555;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+}
+
+.combo-box .list-cell {
+    -fx-text-fill: white;
+    -fx-background-color: #242424;
+}
+
 /* Outer rectangle (the cell background) */
 .cell-outer {
     -fx-fill: #1e1e1e;           /* dark gray background */

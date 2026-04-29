@@ -19,13 +19,19 @@ public class PrimaryController implements BoardListener{
     private CellState activeColor = null;
     private Board board;
     private BoardPanel boardPanel;
+    private Runnable onPuzzleSolved;
     private boolean dragging = false;
     private int headRow = -1, headCol = -1;    
     private int lastRow = -1, lastCol = -1;  
 
     public PrimaryController(Board board, BoardPanel boardPanel) {
+        this(board, boardPanel, null);
+    }
+
+    public PrimaryController(Board board, BoardPanel boardPanel, Runnable onPuzzleSolved) {
         this.board = board;
         this.boardPanel = boardPanel;
+        this.onPuzzleSolved = onPuzzleSolved;
         
     }
 
@@ -78,6 +84,14 @@ public class PrimaryController implements BoardListener{
         boolean changed = board.tryDragStep(activeColor, headRow, headCol, row, col);
         if (!changed) {
             board.redrawPathTail(activeColor);
+            return;
+        }
+
+        if (board.isSolved()) {
+            onMouseReleased();
+            if (onPuzzleSolved != null) {
+                onPuzzleSolved.run();
+            }
             return;
         }
 
