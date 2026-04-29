@@ -1,12 +1,8 @@
 package com.connectcolor.View;
-import javafx.scene.shape.Rectangle;
-import javafx.scene.paint.Color;
-import javafx.scene.input.MouseEvent;
-import javafx.application.Platform;
-import javafx.event.EventHandler;
-import javafx.geometry.Insets;
-import javafx.geometry.Point2D;
+import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.GridPane;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.RowConstraints;
 import javafx.scene.layout.StackPane;
 import com.connectcolor.Model.BoardListener;
 import com.connectcolor.Util.CellState;
@@ -35,6 +31,25 @@ public class BoardPanel extends GridPane {
         this.size = size;
         cells = new CellView[rows][cols];
 
+        setMinSize(0, 0);
+        setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
+
+        for (int col = 0; col < cols; col++) {
+            ColumnConstraints constraints = new ColumnConstraints();
+            constraints.setPercentWidth(100.0 / cols);
+            constraints.setHgrow(Priority.ALWAYS);
+            constraints.setFillWidth(true);
+            getColumnConstraints().add(constraints);
+        }
+
+        for (int row = 0; row < rows; row++) {
+            RowConstraints constraints = new RowConstraints();
+            constraints.setPercentHeight(100.0 / rows);
+            constraints.setVgrow(Priority.ALWAYS);
+            constraints.setFillHeight(true);
+            getRowConstraints().add(constraints);
+        }
+
         for (int row = 0; row < rows; row++) {
             for (int col = 0; col < cols; col++) {
                 int r = row;
@@ -44,10 +59,14 @@ public class BoardPanel extends GridPane {
                 CellView cell = new CellView(size);
                 
                 StackPane cellStack = new StackPane();
-                cellStack.setMinSize(size, size);
+                cellStack.setMinSize(0, 0);
                 cellStack.setPrefSize(size, size);
-                cellStack.setMaxSize(size, size);
+                cellStack.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
                 cellStack.getChildren().addAll(cell.getOuter(), cell.getInner(), cell.getEndpointCircle());
+                cellStack.widthProperty().addListener((obs, oldWidth, newWidth) -> cell.resize(cellStack.getWidth(), cellStack.getHeight()));
+                cellStack.heightProperty().addListener((obs, oldHeight, newHeight) -> cell.resize(cellStack.getWidth(), cellStack.getHeight()));
+                GridPane.setHgrow(cellStack, Priority.ALWAYS);
+                GridPane.setVgrow(cellStack, Priority.ALWAYS);
 
                 cellStack.setOnMousePressed(e -> {
                     notifyCellPressed(r,c);

@@ -104,7 +104,6 @@
 }
 
 .cell-path {
-    -fx-stroke-width: 14;            /* tune based on cell size */
     -fx-stroke-line-cap: round;
     -fx-stroke-line-join: round;
     -fx-fill: transparent;

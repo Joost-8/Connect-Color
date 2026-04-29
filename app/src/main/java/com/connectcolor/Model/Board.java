@@ -120,6 +120,63 @@ public class Board {
         return true;
     }
 
+    public Map<CellState, List<int[]>> exportPlayerPaths() {
+        Map<CellState, List<int[]>> exported = new HashMap<>();
+
+        for (Map.Entry<CellState, ArrayList<Cell>> entry : playerPaths.entrySet()) {
+            ArrayList<Cell> path = entry.getValue();
+            if (path == null || path.size() <= 1) {
+                continue;
+            }
+
+            List<int[]> coordinates = new ArrayList<>();
+            for (Cell cell : path) {
+                coordinates.add(new int[] { cell.getRow(), cell.getCol() });
+            }
+            exported.put(entry.getKey(), coordinates);
+        }
+
+        return exported;
+    }
+
+    public boolean restorePlayerPaths(Map<CellState, List<int[]>> savedPaths) {
+        clearPlayerProgress();
+
+        if (savedPaths == null || savedPaths.isEmpty()) {
+            return true;
+        }
+
+        Set<Cell> occupiedPathCells = new HashSet<>();
+        Map<CellState, ArrayList<Cell>> restoredPaths = new HashMap<>();
+        Set<CellState> restoredFinishedColors = new HashSet<>();
+
+        for (Map.Entry<CellState, List<int[]>> entry : savedPaths.entrySet()) {
+            CellState color = entry.getKey();
+            List<int[]> coordinates = entry.getValue();
+            if (color == null || !color.isColor() || coordinates == null || coordinates.size() <= 1) {
+                continue;
+            }
+
+            ArrayList<Cell> path = restorePath(color, coordinates, occupiedPathCells);
+            if (path == null) {
+                clearPlayerProgress();
+                return false;
+            }
+
+            restoredPaths.put(color, path);
+            Cell tail = path.get(path.size() - 1);
+            if (tail.isFixed() && tail.getSolutionState() == color) {
+                restoredFinishedColors.add(color);
+            }
+        }
+
+        for (Map.Entry<CellState, ArrayList<Cell>> entry : restoredPaths.entrySet()) {
+            playerPaths.put(entry.getKey(), entry.getValue());
+        }
+        finishedColors.addAll(restoredFinishedColors);
+        return true;
+    }
+
     public boolean isEmpty(int row, int col) {
         Cell cell = getCell(row, col);
         return cell.getPlayerState() == CellState.Empty;
@@ -127,6 +184,10 @@ public class Board {
 
     public void addListener(BoardListener listener) {
         listeners.add(listener);
+    }
+
+    public void clearListeners() {
+        listeners.clear();
     }
 
     public Cell[][] copyGrid() {
@@ -188,6 +249,73 @@ public class Board {
         Grid puzzle = NumberlinkGenerator.generateUnique(cols, rows, seed, pairs);
         List<EndpointPair> endpointPairs = NumberlinkGenerator.extractEndpointPairs(puzzle);
         placeEndpointPairs(endpointPairs);
+    }
+
+    private void clearPlayerProgress() {
+        for (int r = 0; r < rows; r++) {
+            for (int c = 0; c < cols; c++) {
+                Cell cell = getCell(r, c);
+                if (!cell.isFixed()) {
+                    cell.setPlayerState(CellState.Empty);
+                }
+            }
+        }
+
+        for (CellState color : new ArrayList<>(playerPaths.keySet())) {
+            playerPaths.put(color, new ArrayList<>());
+        }
+        finishedColors.clear();
+    }
+
+    private ArrayList<Cell> restorePath(CellState color, List<int[]> coordinates, Set<Cell> occupiedPathCells) {
+        ArrayList<Cell> path = new ArrayList<>();
+
+        for (int i = 0; i < coordinates.size(); i++) {
+            int[] coordinate = coordinates.get(i);
+            if (coordinate == null || coordinate.length != 2) {
+                return null;
+            }
+
+            int row = coordinate[0];
+            int col = coordinate[1];
+            if (!isInBounds(row, col)) {
+                return null;
+            }
+
+            Cell cell = getCell(row, col);
+            if (i == 0) {
+                if (!cell.isFixed() || cell.getSolutionState() != color) {
+                    return null;
+                }
+            } else {
+                Cell previous = path.get(path.size() - 1);
+                if (!areOrthogonalNeighbors(previous.getRow(), previous.getCol(), row, col)) {
+                    return null;
+                }
+
+                if (cell.isFixed()) {
+                    if (cell.getSolutionState() != color || i != coordinates.size() - 1) {
+                        return null;
+                    }
+                } else if (!occupiedPathCells.add(cell)) {
+                    return null;
+                }
+            }
+
+            if (path.contains(cell)) {
+                return null;
+            }
+
+            path.add(cell);
+        }
+
+        for (Cell cell : path) {
+            if (!cell.isFixed()) {
+                cell.setPlayerState(color);
+            }
+        }
+
+        return path;
     }
 
     public void setBoard(List<EndpointPair> endpointPairs) {

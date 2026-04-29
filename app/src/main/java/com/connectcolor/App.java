@@ -21,12 +21,15 @@ import com.connectcolor.Model.Board;
 import com.connectcolor.Controllers.PrimaryController;
 import com.connectcolor.Model.Cell;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 import com.connectcolor.Util.Difficulty;
 import com.connectcolor.Util.GameSettings;
 import com.connectcolor.Util.ProgressStore;
+import com.connectcolor.Model.PathProgressStore;
 import com.connectcolor.Model.PuzzlePreloader;
 
 /**
@@ -40,6 +43,9 @@ public class App extends Application {
     private Label levelLabel;
     private ProgressStore progressStore;
     private PuzzlePreloader puzzlePreloader;
+    private PathProgressStore pathProgressStore;
+    private final Map<String, Board> sessionBoards = new HashMap<>();
+    private Board activeBoard;
     private Difficulty currentDifficulty;
     private int currentLevel;
     private int loadRequestId;
@@ -49,6 +55,7 @@ public class App extends Application {
         this.stage = stage;
         this.progressStore = new ProgressStore();
         this.puzzlePreloader = new PuzzlePreloader();
+        this.pathProgressStore = new PathProgressStore();
         this.currentDifficulty = progressStore.getSelectedDifficulty();
         this.currentLevel = progressStore.getLevel(currentDifficulty);
 
@@ -70,6 +77,7 @@ public class App extends Application {
 
     @Override
     public void stop() {
+        saveSessionBoards();
         if (puzzlePreloader != null) {
             puzzlePreloader.shutdown();
         }
@@ -77,6 +85,11 @@ public class App extends Application {
 
     private void showMainMenu() {
         loadRequestId++;
+        saveSessionBoards();
+        if (activeBoard != null) {
+            activeBoard.clearListeners();
+            activeBoard = null;
+        }
         root.setTop(null);
 
         Label title = new Label("Connect Color");
@@ -102,9 +115,7 @@ public class App extends Application {
         root.setCenter(menu);
         root.setPrefSize(520, 620);
 
-        if (stage != null) {
-            stage.sizeToScene();
-        }
+        sizeStageForInitialScene();
     }
 
     private void startDifficulty(Difficulty difficulty) {
@@ -136,6 +147,11 @@ public class App extends Application {
         GameSettings settings = GameSettings.forDifficulty(difficulty);
         int level = currentLevel;
         int requestId = ++loadRequestId;
+        Board sessionBoard = sessionBoards.get(boardKey(difficulty, level));
+        if (sessionBoard != null) {
+            showLoadedBoard(difficulty, level, settings, sessionBoard);
+            return;
+        }
 
         var boardFuture = puzzlePreloader.loadBoard(difficulty, level);
         if (!boardFuture.isDone()) {
@@ -150,6 +166,8 @@ public class App extends Application {
                 showLoadError(error);
                 return;
             }
+            pathProgressStore.load(difficulty, level).ifPresent(board::restorePlayerPaths);
+            sessionBoards.put(boardKey(difficulty, level), board);
             showLoadedBoard(difficulty, level, settings, board);
         }));
     }
@@ -157,23 +175,23 @@ public class App extends Application {
     private void showLoadedBoard(Difficulty difficulty, int level, GameSettings settings, Board board) {
         currentDifficulty = difficulty;
         currentLevel = level;
+        activeBoard = board;
         BoardPanel boardPanel = new BoardPanel(settings);
         boardPanel.setAlignment(Pos.CENTER);
 
+        board.clearListeners();
         PrimaryController controller = new PrimaryController(board, boardPanel, this::advanceLevel);
         board.addListener(controller);
         boardPanel.addListener(controller);
 
-        repaintFixedCells(board, boardPanel);
+        repaintBoard(board, boardPanel, settings);
 
         root.setTop(createGameTopBar());
         root.setCenter(boardPanel);
         root.setPrefSize(settings.getSceneWidth(), settings.getSceneHeight() + 48);
         updateTopBar();
 
-        if (stage != null) {
-            stage.sizeToScene();
-        }
+        sizeStageForInitialScene();
     }
 
     private void showLoading(Difficulty difficulty, int level) {
@@ -192,9 +210,7 @@ public class App extends Application {
         root.setCenter(loading);
         root.setPrefSize(520, 620);
 
-        if (stage != null) {
-            stage.sizeToScene();
-        }
+        sizeStageForInitialScene();
     }
 
     private void showLoadError(Throwable error) {
@@ -220,16 +236,26 @@ public class App extends Application {
         }
     }
 
-    private void repaintFixedCells(Board board, BoardPanel boardPanel) {
-        for (Cell cell : board.getFixedCells()) {
-            boardPanel.setColor(
-                cell.getRow(),
-                cell.getCol(),
-                cell.getSolutionState(),
-                cell.isFixed(),
-                null,
-                null
-            );
+    private void sizeStageForInitialScene() {
+        if (stage != null && !stage.isShowing() && !stage.isFullScreen()) {
+            stage.sizeToScene();
+        }
+    }
+
+    private void repaintBoard(Board board, BoardPanel boardPanel, GameSettings settings) {
+        for (int row = 0; row < settings.getRows(); row++) {
+            for (int col = 0; col < settings.getCols(); col++) {
+                Cell cell = board.getCell(row, col);
+                var dirs = board.getPrevNextDirs(row, col);
+                boardPanel.setColor(
+                    row,
+                    col,
+                    cell.isFixed() ? cell.getSolutionState() : cell.getPlayerState(),
+                    cell.isFixed(),
+                    dirs[0],
+                    dirs[1]
+                );
+            }
         }
     }
 
@@ -260,6 +286,27 @@ public class App extends Application {
     private void queuePreload(Difficulty difficulty, Set<Difficulty> queued) {
         if (queued.add(difficulty)) {
             puzzlePreloader.preloadAround(difficulty, progressStore.getLevel(difficulty), 10);
+        }
+    }
+
+    private String boardKey(Difficulty difficulty, int level) {
+        return difficulty.getKey() + ":" + Math.max(1, level);
+    }
+
+    private void saveSessionBoards() {
+        for (Map.Entry<String, Board> entry : sessionBoards.entrySet()) {
+            String[] parts = entry.getKey().split(":");
+            if (parts.length != 2) {
+                continue;
+            }
+
+            try {
+                Difficulty difficulty = Difficulty.fromKey(parts[0]);
+                int level = Integer.parseInt(parts[1]);
+                pathProgressStore.save(difficulty, level, entry.getValue());
+            } catch (NumberFormatException e) {
+                // Ignore malformed in-memory keys; they are only created by this class.
+            }
         }
     }
 

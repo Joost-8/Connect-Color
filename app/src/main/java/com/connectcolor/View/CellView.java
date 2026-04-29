@@ -14,7 +14,10 @@ public class CellView {
     private javafx.scene.shape.Path inner; 
     private Rectangle outer;
     private Circle endpointCircle;
-    private double size;
+    private double width;
+    private double height;
+    private Dir prev;
+    private Dir next;
     
 
     public CellView(double size) {
@@ -23,7 +26,8 @@ public class CellView {
         inner.setManaged(false);
         inner.setMouseTransparent(true);
         inner.setVisible(false);
-        this.size = size;
+        this.width = size;
+        this.height = size;
 
         outer = new Rectangle(size, size, Color.BLACK);
 
@@ -56,6 +60,9 @@ public class CellView {
 
     /** show fixed endpoint */
     public void showEndpoint(Color color) {
+        prev = null;
+        next = null;
+        inner.getElements().clear();
         endpointCircle.setFill(color);
         endpointCircle.setVisible(true);
         inner.setStroke(color);
@@ -70,10 +77,30 @@ public class CellView {
     }
 
     public void clear() {
+        prev = null;
+        next = null;
         inner.setVisible(false);
         inner.getElements().clear();
         inner.getStrokeDashArray().clear();
         endpointCircle.setVisible(false);
+    }
+
+    public void resize(double width, double height) {
+        if (width <= 0 || height <= 0) {
+            return;
+        }
+
+        this.width = width;
+        this.height = height;
+
+        double minSide = Math.min(width, height);
+        outer.setWidth(width);
+        outer.setHeight(height);
+        outer.setArcWidth(minSide * 0.18);
+        outer.setArcHeight(minSide * 0.18);
+        endpointCircle.setRadius(minSide * 0.3);
+        inner.setStrokeWidth(Math.max(6, minSide * 0.28));
+        redrawPiece();
     }
 
     private boolean isOpposite(Dir a, Dir b) {
@@ -102,19 +129,19 @@ public class CellView {
         return (dirIndex(to) - dirIndex(from) + 4) % 4 == 1;
     }
 
-    private double[] pointForDir(Dir d, double S) {
-        double cx = S / 2.0;
-        double cy = S / 2.0;
+    private double[] pointForDir(Dir d) {
+        double cx = width / 2.0;
+        double cy = height / 2.0;
 
         switch (d) {
             case UP:
                 return new double[]{cx, 0};
             case DOWN:
-                return new double[]{cx, S};
+                return new double[]{cx, height};
             case LEFT:
                 return new double[]{0, cy};
             case RIGHT:
-                return new double[]{S, cy};
+                return new double[]{width, cy};
             default:
                 return new double[]{cx, cy};
         }
@@ -122,6 +149,12 @@ public class CellView {
 
 
     public void setPiece(Dir prev, Dir next) {
+        this.prev = prev;
+        this.next = next;
+        redrawPiece();
+    }
+
+    private void redrawPiece() {
         inner.getElements().clear();
         inner.getStrokeDashArray().clear();
 
@@ -132,18 +165,18 @@ public class CellView {
 
         inner.setVisible(true);
 
-        double S = this.size;
-        double cx = S / 2.0, cy = S / 2.0;
+        double cx = width / 2.0;
+        double cy = height / 2.0;
 
         // End-cap (only one connection)
         if (prev != null && next == null) {
-            double[] p = pointForDir(prev, S);
+            double[] p = pointForDir(prev);
             inner.getElements().add(new MoveTo(cx, cy));
             inner.getElements().add(new LineTo(p[0], p[1]));
             return;
         }
         if (prev == null && next != null) {
-            double[] p = pointForDir(next, S);
+            double[] p = pointForDir(next);
             inner.getElements().add(new MoveTo(cx, cy));
             inner.getElements().add(new LineTo(p[0], p[1]));
             return;
@@ -151,14 +184,14 @@ public class CellView {
 
         // Two connections: straight or corner
         if (prev != null && next != null) {
-            double[] a = pointForDir(prev, S);
-            double[] b = pointForDir(next, S);
+            double[] a = pointForDir(prev);
+            double[] b = pointForDir(next);
 
             inner.getElements().add(new MoveTo(a[0], a[1]));
             if (isOpposite(prev, next)) {
                 inner.getElements().add(new LineTo(b[0], b[1]));
             } else {
-                inner.getElements().add(new ArcTo(S / 2.0, S / 2.0, 0, b[0], b[1], false, !isClockwiseQuarter(prev, next)));
+                inner.getElements().add(new ArcTo(width / 2.0, height / 2.0, 0, b[0], b[1], false, !isClockwiseQuarter(prev, next)));
             }
         }
     }
