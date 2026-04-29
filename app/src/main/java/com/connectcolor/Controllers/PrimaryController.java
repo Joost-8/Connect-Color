@@ -79,7 +79,10 @@ public class PrimaryController implements BoardListener{
         if (!board.areOrthogonalNeighbors(headRow, headCol, row, col)) return;
 
         boolean changed = board.tryDragStep(activeColor, headRow, headCol, row, col);
-        if (!changed) return;
+        if (!changed) {
+            board.redrawPathTail(activeColor);
+            return;
+        }
 
         if (!board.isPathUnfinished(activeColor)) {
             onMouseReleased();

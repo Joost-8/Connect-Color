@@ -320,6 +320,15 @@ public class Board {
         return new int[]{ head.getRow(), head.getCol() };
     }
 
+    public void redrawPathTail(CellState color) {
+        ArrayList<Cell> path = playerPaths.get(color);
+        if (path == null || path.isEmpty()) return;
+
+        notifyPathCell(path.get(path.size() - 1));
+        if (path.size() >= 2) notifyPathCell(path.get(path.size() - 2));
+        if (path.size() >= 3) notifyPathCell(path.get(path.size() - 3));
+    }
+
     public boolean tryDragStep(CellState color, int headR, int headC, int targetR, int targetC) {
         if (color == null || color == CellState.Empty) return false;
         if (!isInBounds(targetR, targetC)) return false;
@@ -358,7 +367,14 @@ public class Board {
         // --- B) FINISH: step onto the other fixed endpoint of same color ---
         if (target.isFixed()) {
             // can only finish on matching color endpoint
-            if (target.getSolutionState() != color) return false;
+            if (target.getSolutionState() != color) {
+                redrawPathTail(color);
+                return false;
+            }
+            if (indexOf(path, targetR, targetC) != -1) {
+                redrawPathTail(color);
+                return false;
+            }
 
             // If you want to prevent "finish" without any path, enforce at least 2 cells:
             // if (path.size() < 2) return false;
@@ -373,13 +389,17 @@ public class Board {
 
         // --- C) EXTEND: only into EMPTY cells ---
         if (target.getPlayerState() != CellState.Empty) {
-        // If it's your own color, we do NOT allow "jump trimming" yet.
-        // For now only allow undo by 1 (handled above).
-        return false;
-    }
+            // If it's your own color, we do NOT allow "jump trimming" yet.
+            // For now only allow undo by 1 (handled above).
+            redrawPathTail(color);
+            return false;
+        }
 
         // prevent self-intersection into your own path
-        if (indexOf(path, targetR, targetC) != -1) return false;
+        if (indexOf(path, targetR, targetC) != -1) {
+            redrawPathTail(color);
+            return false;
+        }
 
         // paint & add
         target.setPlayerState(color);
