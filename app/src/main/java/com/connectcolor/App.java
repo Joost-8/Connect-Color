@@ -27,7 +27,7 @@ public class App extends Application {
     @Override
     public void start(Stage stage) throws IOException {
 
-        GameSettings settings = GameSettings.expert();
+        GameSettings settings = GameSettings.medium();
         Board board = new Board(settings);
         BoardPanel boardPanel = new BoardPanel(settings);
         boardPanel.setAlignment(Pos.CENTER);

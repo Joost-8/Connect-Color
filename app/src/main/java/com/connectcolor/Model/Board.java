@@ -297,6 +297,30 @@ public class Board {
         return head.getRow() == row && head.getCol() == col;
     }
 
+    public boolean resumePathFromCell(int row, int col, CellState color) {
+        if (color == null || color == CellState.Empty) return false;
+
+        ArrayList<Cell> path = playerPaths.get(color);
+        if (path == null || path.isEmpty()) return false;
+
+        int idx = indexOf(path, row, col);
+        if (idx <= 0) return false;
+
+        while (path.size() > idx + 1) {
+            Cell removed = path.remove(path.size() - 1);
+            if (removed.isFixed()) {
+                notifyCellUpdate(removed.getRow(), removed.getCol(), removed.getSolutionState());
+            } else {
+                removed.setPlayerState(CellState.Empty);
+                notifyCellUpdate(removed.getRow(), removed.getCol(), CellState.Empty);
+            }
+        }
+
+        finishedColors.remove(color);
+        redrawPathTail(color);
+        return true;
+    }
+
     public boolean isPathUnfinished(CellState color) {
         return !finishedColors.contains(color);
     }

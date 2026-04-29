@@ -51,12 +51,9 @@ public class PrimaryController implements BoardListener{
             return;
         }
 
-        // CASE 2: click non-fixed -> only allow if it's the HEAD of an unfinished path
+        // CASE 2: click non-fixed path cell -> trim there and continue from it
         CellState colorHere = pressed.getPlayerState();
-        if (colorHere != CellState.Empty
-            && board.isPathUnfinished(colorHere)
-            && board.isHeadCell(row, col, colorHere)) {
-
+        if (colorHere != CellState.Empty && board.resumePathFromCell(row, col, colorHere)) {
             activeColor = colorHere;
             dragging = true;
 
