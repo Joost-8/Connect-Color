@@ -44,6 +44,9 @@ public class BoardPanel extends GridPane {
                 CellView cell = new CellView(size);
                 
                 StackPane cellStack = new StackPane();
+                cellStack.setMinSize(size, size);
+                cellStack.setPrefSize(size, size);
+                cellStack.setMaxSize(size, size);
                 cellStack.getChildren().addAll(cell.getOuter(), cell.getInner(), cell.getEndpointCircle());
 
                 cellStack.setOnMousePressed(e -> {
@@ -80,7 +83,7 @@ public class BoardPanel extends GridPane {
         }
 
         if (isFixed) {
-            view.showEndpoint(state.getColor());
+            view.showEndpoint(state.getColor(), prev, next);
         } else {
             view.showPath(state.getColor());
             view.setPiece(prev, next);

@@ -81,6 +81,11 @@ public class PrimaryController implements BoardListener{
         boolean changed = board.tryDragStep(activeColor, headRow, headCol, row, col);
         if (!changed) return;
 
+        if (!board.isPathUnfinished(activeColor)) {
+            onMouseReleased();
+            return;
+        }
+
         // refresh head after the board updated the path (extend or undo)
         int[] head = board.getHead(activeColor);
         if (head != null) {

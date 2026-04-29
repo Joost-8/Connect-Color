@@ -1,6 +1,9 @@
 package com.connectcolor.View;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Rectangle;
+import javafx.scene.shape.MoveTo;
+import javafx.scene.shape.LineTo;
+import javafx.scene.shape.ArcTo;
 
 import com.connectcolor.Util.Dir;
 
@@ -17,6 +20,8 @@ public class CellView {
     public CellView(double size) {
         inner = new javafx.scene.shape.Path();
         inner.getStyleClass().add("cell-path");
+        inner.setManaged(false);
+        inner.setMouseTransparent(true);
         inner.setVisible(false);
         this.size = size;
 
@@ -53,12 +58,21 @@ public class CellView {
     public void showEndpoint(Color color) {
         endpointCircle.setFill(color);
         endpointCircle.setVisible(true);
+        inner.setStroke(color);
+        inner.setFill(Color.TRANSPARENT);
         inner.setVisible(false);
+    }
+
+    /** show fixed endpoint with a path connector under the endpoint circle */
+    public void showEndpoint(Color color, Dir prev, Dir next) {
+        showEndpoint(color);
+        setPiece(prev, next);
     }
 
     public void clear() {
         inner.setVisible(false);
         inner.getElements().clear();
+        inner.getStrokeDashArray().clear();
         endpointCircle.setVisible(false);
     }
 
@@ -69,19 +83,38 @@ public class CellView {
            (a == Dir.RIGHT && b == Dir.LEFT);
     }
 
-    private double[] pointForDir(Dir d, double S, double m) {
+    private int dirIndex(Dir dir) {
+        switch (dir) {
+            case UP:
+                return 0;
+            case RIGHT:
+                return 1;
+            case DOWN:
+                return 2;
+            case LEFT:
+                return 3;
+            default:
+                return -1;
+        }
+    }
+
+    private boolean isClockwiseQuarter(Dir from, Dir to) {
+        return (dirIndex(to) - dirIndex(from) + 4) % 4 == 1;
+    }
+
+    private double[] pointForDir(Dir d, double S) {
         double cx = S / 2.0;
         double cy = S / 2.0;
 
         switch (d) {
             case UP:
-                return new double[]{cx, m};
+                return new double[]{cx, 0};
             case DOWN:
-                return new double[]{cx, S - m};
+                return new double[]{cx, S};
             case LEFT:
-                return new double[]{m, cy};
+                return new double[]{0, cy};
             case RIGHT:
-                return new double[]{S - m, cy};
+                return new double[]{S, cy};
             default:
                 return new double[]{cx, cy};
         }
@@ -90,39 +123,42 @@ public class CellView {
 
     public void setPiece(Dir prev, Dir next) {
         inner.getElements().clear();
+        inner.getStrokeDashArray().clear();
 
-        double S = this.size;       // store size in CellView field
+        if (prev == null && next == null) {
+            inner.setVisible(false);
+            return;
+        }
+
+        inner.setVisible(true);
+
+        double S = this.size;
         double cx = S / 2.0, cy = S / 2.0;
-        double m = S * 0.09;
 
         // End-cap (only one connection)
         if (prev != null && next == null) {
-            double[] p = pointForDir(prev, S, m);
-            inner.getElements().add(new javafx.scene.shape.MoveTo(cx, cy));
-            inner.getElements().add(new javafx.scene.shape.LineTo(p[0], p[1]));
-            animateDrawIn();
+            double[] p = pointForDir(prev, S);
+            inner.getElements().add(new MoveTo(cx, cy));
+            inner.getElements().add(new LineTo(p[0], p[1]));
             return;
         }
         if (prev == null && next != null) {
-            double[] p = pointForDir(next, S, m);
-            inner.getElements().add(new javafx.scene.shape.MoveTo(cx, cy));
-            inner.getElements().add(new javafx.scene.shape.LineTo(p[0], p[1]));
-            animateDrawIn();
+            double[] p = pointForDir(next, S);
+            inner.getElements().add(new MoveTo(cx, cy));
+            inner.getElements().add(new LineTo(p[0], p[1]));
             return;
         }
 
         // Two connections: straight or corner
         if (prev != null && next != null) {
-            double[] a = pointForDir(prev, S, m);
-            double[] b = pointForDir(next, S, m);
+            double[] a = pointForDir(prev, S);
+            double[] b = pointForDir(next, S);
 
-            inner.getElements().add(new javafx.scene.shape.MoveTo(a[0], a[1]));
-            inner.getElements().add(new javafx.scene.shape.LineTo(cx, cy));
-            inner.getElements().add(new javafx.scene.shape.LineTo(b[0], b[1]));
-
-            // Only animate corners if you want:
-            if (!isOpposite(prev, next)) {
-                animateDrawIn();   // corner animation
+            inner.getElements().add(new MoveTo(a[0], a[1]));
+            if (isOpposite(prev, next)) {
+                inner.getElements().add(new LineTo(b[0], b[1]));
+            } else {
+                inner.getElements().add(new ArcTo(S / 2.0, S / 2.0, 0, b[0], b[1], false, !isClockwiseQuarter(prev, next)));
             }
         }
     }

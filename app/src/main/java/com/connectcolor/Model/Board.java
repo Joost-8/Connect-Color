@@ -237,13 +237,20 @@ public class Board {
         // Clear any previous player path for this color
         ArrayList<Cell> oldPath = playerPaths.get(color);
         if (oldPath != null) {
+            ArrayList<Cell> fixedToRefresh = new ArrayList<>();
             for (Cell cell : oldPath) {
                 if (!cell.isFixed()) {
                     cell.setPlayerState(CellState.Empty);
                     notifyCellUpdate(cell.getRow(), cell.getCol(), CellState.Empty);
+                } else {
+                    fixedToRefresh.add(cell);
                 }
             }
             oldPath.clear();
+
+            for (Cell cell : fixedToRefresh) {
+                notifyCellUpdate(cell.getRow(), cell.getCol(), cell.getSolutionState());
+            }
         }
 
         // Start new path from this fixed cell
@@ -356,9 +363,11 @@ public class Board {
             // If you want to prevent "finish" without any path, enforce at least 2 cells:
             // if (path.size() < 2) return false;
 
-            // Don't modify playerState (fixed ignores setPlayerState anyway)
-            // Just mark finished
+            path.add(target);
             finishedColors.add(color);
+            notifyPathCell(path.get(path.size() - 2));
+            notifyPathCell(path.get(path.size() - 1));
+            if (path.size() >= 3) notifyPathCell(path.get(path.size() - 3));
             return true;
         }
 
