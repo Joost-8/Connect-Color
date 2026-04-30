@@ -4,7 +4,7 @@ import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.RowConstraints;
 import javafx.scene.layout.StackPane;
-import com.connectcolor.Model.BoardListener;
+import com.connectcolor.Model.listeners.BoardListener;
 import com.connectcolor.Util.CellState;
 import com.connectcolor.Util.Dir;
 import com.connectcolor.Util.GameSettings;
@@ -77,6 +77,7 @@ public class BoardPanel extends GridPane {
 
                 // this fires when mouse enters while dragging
                 cellStack.setOnMouseDragEntered(e -> notifyCellHovered(r, c));
+                cellStack.setOnMouseEntered(e -> notifyCellHovered(r, c));
 
 
                 add(cellStack, col, row);

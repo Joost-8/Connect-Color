@@ -7,6 +7,13 @@
 - `App` creates a `Board`, a `BoardPanel`, and one `PrimaryController`.
 - The controller is registered as a listener to both the board and the panel.
 
+## Model Package Layout
+
+- `Model.algorithm`: puzzle generation, solving, and generator helper types.
+- `Model.listeners`: listener interfaces shared between the model, controller, and view.
+- `Model.storage`: cached puzzle files and saved path progress.
+- `Model.game`: board state, cells, and core game logic.
+
 ## Input -> UI Update Flow
 
 1. `BoardPanel` listens for mouse press, drag-enter, and release events.
@@ -46,7 +53,7 @@ Important behaviors:
 
 ## Numberlink Generator
 
-Generation starts in `Board.setBoard()` and calls `NumberlinkGenerator.generate(...)`.
+Generation starts in `Model.game.Board.setBoard()` and calls `Model.algorithm.NumberlinkGenerator.generate(...)`.
 
 High-level pipeline:
 

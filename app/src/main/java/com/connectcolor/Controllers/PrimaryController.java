@@ -2,7 +2,7 @@ package com.connectcolor.Controllers;
 
 import java.io.IOException;
 
-import com.connectcolor.Model.BoardListener;
+import com.connectcolor.Model.listeners.BoardListener;
 import com.connectcolor.Util.CellState;
 import com.connectcolor.Util.Dir;
 
@@ -10,9 +10,9 @@ import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.scene.paint.Color;
 import com.connectcolor.View.BoardPanel;
-import com.connectcolor.Model.Board;
+import com.connectcolor.Model.game.Board;
 import java.util.ArrayList;
-import com.connectcolor.Model.Cell;
+import com.connectcolor.Model.game.Cell;
 
 public class PrimaryController implements BoardListener{
 
@@ -21,6 +21,7 @@ public class PrimaryController implements BoardListener{
     private BoardPanel boardPanel;
     private Runnable onPuzzleSolved;
     private boolean dragging = false;
+    private boolean movedSincePress = false;
     private int headRow = -1, headCol = -1;    
     private int lastRow = -1, lastCol = -1;  
 
@@ -51,6 +52,7 @@ public class PrimaryController implements BoardListener{
 
             activeColor = pressed.getSolutionState();
             dragging = true;
+            movedSincePress = false;
 
             headRow = row; headCol = col;
             lastRow = row; lastCol = col;
@@ -62,6 +64,7 @@ public class PrimaryController implements BoardListener{
         if (colorHere != CellState.Empty && board.resumePathFromCell(row, col, colorHere)) {
             activeColor = colorHere;
             dragging = true;
+            movedSincePress = false;
 
             headRow = row; headCol = col;
             lastRow = row; lastCol = col;
@@ -71,6 +74,7 @@ public class PrimaryController implements BoardListener{
         // Otherwise: cancel
         activeColor = null;
         dragging = false;
+        movedSincePress = false;
         headRow = headCol = lastRow = lastCol = -1;
     }
 
@@ -86,6 +90,7 @@ public class PrimaryController implements BoardListener{
             board.redrawPathTail(activeColor);
             return;
         }
+        movedSincePress = true;
 
         if (board.isSolved()) {
             onMouseReleased();
@@ -110,8 +115,17 @@ public class PrimaryController implements BoardListener{
 
     @Override
     public void onMouseReleased() {
+        if (dragging && !movedSincePress) {
+            return;
+        }
+
+        stopDrawing();
+    }
+
+    private void stopDrawing() {
         activeColor = null;
         dragging = false;
+        movedSincePress = false;
         headRow = headCol = lastRow = lastCol = -1;
     }
 

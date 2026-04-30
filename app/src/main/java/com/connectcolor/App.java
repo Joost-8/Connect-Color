@@ -18,9 +18,9 @@ import javafx.scene.text.Text;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 import com.connectcolor.View.BoardPanel;
-import com.connectcolor.Model.Board;
+import com.connectcolor.Model.game.Board;
 import com.connectcolor.Controllers.PrimaryController;
-import com.connectcolor.Model.Cell;
+import com.connectcolor.Model.game.Cell;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -31,8 +31,8 @@ import com.connectcolor.Util.Difficulty;
 import com.connectcolor.Util.GameSettings;
 import com.connectcolor.Util.ProgressStore;
 import com.connectcolor.Util.CellState;
-import com.connectcolor.Model.PathProgressStore;
-import com.connectcolor.Model.PuzzlePreloader;
+import com.connectcolor.Model.storage.PathProgressStore;
+import com.connectcolor.Model.storage.PuzzlePreloader;
 
 /**
  * JavaFX App
