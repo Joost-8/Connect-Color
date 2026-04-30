@@ -226,6 +226,7 @@ public class App extends Application {
         root.setCenter(boardPanel);
         root.setPrefSize(settings.getSceneWidth(), settings.getSceneHeight() + 48);
         updateTopBar();
+        Platform.runLater(boardPanel::requestFocus);
 
         sizeStageForInitialScene();
     }

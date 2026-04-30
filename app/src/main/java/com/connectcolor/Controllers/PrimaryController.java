@@ -44,11 +44,22 @@ public class PrimaryController implements BoardListener{
 
     @Override
     public void onCellPressed(int row, int col) {
+        if (dragging && activeColor != null && board.isHeadCell(row, col, activeColor)) {
+            stopDrawing();
+            return;
+        }
+
         Cell pressed = board.getCell(row, col);
         
         // CASE 1: click fixed endpoint -> start/reset from that endpoint
         if (pressed.isFixed()) {
+            boolean hadDrawnPath = board.hasDrawnPath(pressed.getSolutionState());
             board.startPathFromFixed(row, col);
+
+            if (hadDrawnPath) {
+                stopDrawing();
+                return;
+            }
 
             activeColor = pressed.getSolutionState();
             dragging = true;
@@ -80,7 +91,18 @@ public class PrimaryController implements BoardListener{
 
     @Override
     public void onCellHovered(int row, int col) {
+        moveToCell(row, col);
+    }
+
+    @Override
+    public void onMoveRequested(int rowDelta, int colDelta) {
         if (!dragging || activeColor == null) return;
+        moveToCell(headRow + rowDelta, headCol + colDelta);
+    }
+
+    private void moveToCell(int row, int col) {
+        if (!dragging || activeColor == null) return;
+        if (!board.isInBounds(row, col)) return;
 
         // must move 1 step from current head
         if (!board.areOrthogonalNeighbors(headRow, headCol, row, col)) return;

@@ -4,6 +4,7 @@ import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.RowConstraints;
 import javafx.scene.layout.StackPane;
+import javafx.scene.input.KeyCode;
 import com.connectcolor.Model.listeners.BoardListener;
 import com.connectcolor.Util.CellState;
 import com.connectcolor.Util.Dir;
@@ -33,6 +34,23 @@ public class BoardPanel extends GridPane {
 
         setMinSize(0, 0);
         setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
+        setFocusTraversable(true);
+        setOnKeyPressed(event -> {
+            KeyCode code = event.getCode();
+            if (code == KeyCode.UP) {
+                notifyMoveRequested(-1, 0);
+                event.consume();
+            } else if (code == KeyCode.DOWN) {
+                notifyMoveRequested(1, 0);
+                event.consume();
+            } else if (code == KeyCode.LEFT) {
+                notifyMoveRequested(0, -1);
+                event.consume();
+            } else if (code == KeyCode.RIGHT) {
+                notifyMoveRequested(0, 1);
+                event.consume();
+            }
+        });
 
         for (int col = 0; col < cols; col++) {
             ColumnConstraints constraints = new ColumnConstraints();
@@ -69,6 +87,7 @@ public class BoardPanel extends GridPane {
                 GridPane.setVgrow(cellStack, Priority.ALWAYS);
 
                 cellStack.setOnMousePressed(e -> {
+                    requestFocus();
                     notifyCellPressed(r,c);
                 });
 
@@ -126,6 +145,12 @@ public class BoardPanel extends GridPane {
     public void notifyCellHovered(int row, int col) {
         for(BoardListener listener : listeners) {
             listener.onCellHovered(row, col);
+        }
+    }
+
+    public void notifyMoveRequested(int rowDelta, int colDelta) {
+        for(BoardListener listener : listeners) {
+            listener.onMoveRequested(rowDelta, colDelta);
         }
     }
 

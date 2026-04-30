@@ -503,6 +503,11 @@ public class Board {
         return !finishedColors.contains(color);
     }
 
+    public boolean hasDrawnPath(CellState color) {
+        ArrayList<Cell> path = playerPaths.get(color);
+        return path != null && path.size() > 1;
+    }
+
     public boolean isFinishedPathCell(int row, int col) {
         return getFinishedPathColor(row, col) != CellState.Empty;
     }
