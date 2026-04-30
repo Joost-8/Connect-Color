@@ -11,6 +11,12 @@ import javafx.scene.paint.Color;
 
 public class CellView {
 
+    private static final double PATH_WIDTH_RATIO = 0.28;
+    private static final double CORNER_RADIUS_RATIO = 0.23;
+    private static final Color EMPTY_BACKGROUND = Color.web("#1e1e1e");
+    private static final double FINISHED_BACKGROUND_ALPHA = 0.16;
+    private static final double FINISHED_BACKGROUND_WHITE_MIX = 0.68;
+
     private javafx.scene.shape.Path inner; 
     private Rectangle outer;
     private Circle endpointCircle;
@@ -29,7 +35,7 @@ public class CellView {
         this.width = size;
         this.height = size;
 
-        outer = new Rectangle(size, size, Color.BLACK);
+        outer = new Rectangle(size, size, EMPTY_BACKGROUND);
 
         
         endpointCircle = new Circle(size * 0.3);
@@ -79,10 +85,21 @@ public class CellView {
     public void clear() {
         prev = null;
         next = null;
+        setFinishedBackground(null);
         inner.setVisible(false);
         inner.getElements().clear();
         inner.getStrokeDashArray().clear();
         endpointCircle.setVisible(false);
+    }
+
+    public void setFinishedBackground(Color color) {
+        if (color == null || color.equals(Color.TRANSPARENT)) {
+            outer.setFill(EMPTY_BACKGROUND);
+            return;
+        }
+
+        Color paleColor = color.interpolate(Color.WHITE, FINISHED_BACKGROUND_WHITE_MIX);
+        outer.setFill(new Color(paleColor.getRed(), paleColor.getGreen(), paleColor.getBlue(), FINISHED_BACKGROUND_ALPHA));
     }
 
     public void resize(double width, double height) {
@@ -99,7 +116,7 @@ public class CellView {
         outer.setArcWidth(minSide * 0.18);
         outer.setArcHeight(minSide * 0.18);
         endpointCircle.setRadius(minSide * 0.3);
-        inner.setStrokeWidth(Math.max(6, minSide * 0.28));
+        inner.setStrokeWidth(pathStrokeWidth());
         redrawPiece();
     }
 
@@ -147,6 +164,46 @@ public class CellView {
         }
     }
 
+    private double pathStrokeWidth() {
+        return Math.max(6, Math.min(width, height) * PATH_WIDTH_RATIO);
+    }
+
+    private double cornerRadius() {
+        return Math.min(width, height) * CORNER_RADIUS_RATIO;
+    }
+
+    private double[] vectorForDir(Dir dir) {
+        switch (dir) {
+            case UP:
+                return new double[]{0, -1};
+            case RIGHT:
+                return new double[]{1, 0};
+            case DOWN:
+                return new double[]{0, 1};
+            case LEFT:
+                return new double[]{-1, 0};
+            default:
+                return new double[]{0, 0};
+        }
+    }
+
+    private void addCorner(Dir from, Dir to) {
+        double radius = cornerRadius();
+        double cx = width / 2.0;
+        double cy = height / 2.0;
+        double[] fromEdge = pointForDir(from);
+        double[] toEdge = pointForDir(to);
+        double[] fromVector = vectorForDir(from);
+        double[] toVector = vectorForDir(to);
+        double[] fromTangent = new double[]{cx + fromVector[0] * radius, cy + fromVector[1] * radius};
+        double[] toTangent = new double[]{cx + toVector[0] * radius, cy + toVector[1] * radius};
+
+        inner.getElements().add(new MoveTo(fromEdge[0], fromEdge[1]));
+        inner.getElements().add(new LineTo(fromTangent[0], fromTangent[1]));
+        inner.getElements().add(new ArcTo(radius, radius, 0, toTangent[0], toTangent[1], false, !isClockwiseQuarter(from, to)));
+        inner.getElements().add(new LineTo(toEdge[0], toEdge[1]));
+    }
+
 
     public void setPiece(Dir prev, Dir next) {
         this.prev = prev;
@@ -191,7 +248,8 @@ public class CellView {
             if (isOpposite(prev, next)) {
                 inner.getElements().add(new LineTo(b[0], b[1]));
             } else {
-                inner.getElements().add(new ArcTo(width / 2.0, height / 2.0, 0, b[0], b[1], false, !isClockwiseQuarter(prev, next)));
+                inner.getElements().clear();
+                addCorner(prev, next);
             }
         }
     }

@@ -121,7 +121,7 @@ public class PrimaryController implements BoardListener{
         
         Dir[] dirs = board.getPrevNextDirs(row, col); // returns {prevDir, nextDir}
 
-        boardPanel.setColor(row, col, cellState, cell.isFixed(), dirs[0], dirs[1]);
+        boardPanel.setColor(row, col, cellState, cell.isFixed(), dirs[0], dirs[1], board.getFinishedPathColor(row, col));
  
 
     }

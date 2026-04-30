@@ -93,13 +93,15 @@ public class BoardPanel extends GridPane {
 
     }
 
-    public void setColor(int row, int col, CellState state, boolean isFixed, Dir prev, Dir next) {
-            CellView view = cells[row][col];
+    public void setColor(int row, int col, CellState state, boolean isFixed, Dir prev, Dir next, CellState finishedPathColor) {
+        CellView view = cells[row][col];
 
         if (state == CellState.Empty) {
             view.clear();
             return;
         }
+
+        view.setFinishedBackground(finishedPathColor != CellState.Empty ? finishedPathColor.getColor() : null);
 
         if (isFixed) {
             view.showEndpoint(state.getColor(), prev, next);

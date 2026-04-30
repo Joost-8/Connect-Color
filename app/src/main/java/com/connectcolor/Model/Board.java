@@ -407,6 +407,7 @@ public class Board {
         if (!start.isFixed()) return;
 
         CellState color = start.getSolutionState();
+        markPathUnfinished(color);
 
         // Clear any previous player path for this color
         ArrayList<Cell> oldPath = playerPaths.get(color);
@@ -431,8 +432,6 @@ public class Board {
         ArrayList<Cell> path = new ArrayList<>();
         path.add(start);
         playerPaths.put(color, path);
-
-        finishedColors.remove(color); // path is now unfinished
     }
 
 
@@ -480,6 +479,8 @@ public class Board {
         int idx = indexOf(path, row, col);
         if (idx <= 0) return false;
 
+        markPathUnfinished(color);
+
         while (path.size() > idx + 1) {
             Cell removed = path.remove(path.size() - 1);
             if (removed.isFixed()) {
@@ -490,13 +491,27 @@ public class Board {
             }
         }
 
-        finishedColors.remove(color);
         redrawPathTail(color);
         return true;
     }
 
     public boolean isPathUnfinished(CellState color) {
         return !finishedColors.contains(color);
+    }
+
+    public boolean isFinishedPathCell(int row, int col) {
+        return getFinishedPathColor(row, col) != CellState.Empty;
+    }
+
+    public CellState getFinishedPathColor(int row, int col) {
+        for (CellState color : finishedColors) {
+            ArrayList<Cell> path = playerPaths.get(color);
+            if (path != null && indexOf(path, row, col) != -1) {
+                return color;
+            }
+        }
+
+        return CellState.Empty;
     }
 
     public boolean areOrthogonalNeighbors(int r1, int c1, int r2, int c2) {
@@ -547,6 +562,7 @@ public class Board {
         if (path.size() >= 2) {
             Cell prev = path.get(path.size() - 2);
             if (prev.getRow() == targetR && prev.getCol() == targetC) {
+                markPathUnfinished(color);
                 Cell popped = path.remove(path.size() - 1);
                 notifyPathCell(path.get(path.size() - 1)); // new head
                 if (path.size() >= 2) notifyPathCell(path.get(path.size() - 2));
@@ -557,7 +573,6 @@ public class Board {
                     notifyCellUpdate(popped.getRow(), popped.getCol(), CellState.Empty);
                 }
 
-                finishedColors.remove(color);
                 return true;
             }
         }
@@ -579,9 +594,7 @@ public class Board {
 
             path.add(target);
             finishedColors.add(color);
-            notifyPathCell(path.get(path.size() - 2));
-            notifyPathCell(path.get(path.size() - 1));
-            if (path.size() >= 3) notifyPathCell(path.get(path.size() - 3));
+            notifyWholePath(color);
             return true;
         }
 
@@ -607,7 +620,7 @@ public class Board {
         notifyPathCell(path.get(path.size() - 2));
         notifyPathCell(path.get(path.size() - 1)); // target
         if (path.size() >= 3) notifyPathCell(path.get(path.size() - 3));
-        finishedColors.remove(color);
+        markPathUnfinished(color);
         return true;
     }
 
@@ -644,8 +657,23 @@ public class Board {
 
 
     private void notifyPathCell(Cell cell) {
-        CellState s = cell.getPlayerState();
+        CellState s = cell.isFixed() ? cell.getSolutionState() : cell.getPlayerState();
         notifyCellUpdate(cell.getRow(), cell.getCol(), s);
+    }
+
+    private void notifyWholePath(CellState color) {
+        ArrayList<Cell> path = playerPaths.get(color);
+        if (path == null) return;
+
+        for (Cell cell : path) {
+            notifyPathCell(cell);
+        }
+    }
+
+    private void markPathUnfinished(CellState color) {
+        if (finishedColors.remove(color)) {
+            notifyWholePath(color);
+        }
     }
 
 

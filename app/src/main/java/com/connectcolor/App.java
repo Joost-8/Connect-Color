@@ -14,6 +14,7 @@ import javafx.scene.control.ProgressIndicator;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
+import javafx.scene.text.Text;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 import com.connectcolor.View.BoardPanel;
@@ -29,6 +30,7 @@ import java.util.Set;
 import com.connectcolor.Util.Difficulty;
 import com.connectcolor.Util.GameSettings;
 import com.connectcolor.Util.ProgressStore;
+import com.connectcolor.Util.CellState;
 import com.connectcolor.Model.PathProgressStore;
 import com.connectcolor.Model.PuzzlePreloader;
 
@@ -92,11 +94,14 @@ public class App extends Application {
         }
         root.setTop(null);
 
-        Label title = new Label("Connect Color");
-        title.getStyleClass().add("menu-title");
+        HBox title = createColoredTitle();
 
         VBox difficultyList = new VBox(12);
         difficultyList.setAlignment(Pos.CENTER);
+        difficultyList.getStyleClass().add("difficulty-list");
+        difficultyList.setMinWidth(260);
+        difficultyList.setMaxWidth(520);
+        difficultyList.prefWidthProperty().bind(scene.widthProperty().multiply(0.25));
 
         for (Difficulty difficulty : Difficulty.values()) {
             Button button = new Button(difficulty + " - Level " + progressStore.getLevel(difficulty));
@@ -116,6 +121,37 @@ public class App extends Application {
         root.setPrefSize(520, 620);
 
         sizeStageForInitialScene();
+    }
+
+    private HBox createColoredTitle() {
+        HBox title = new HBox();
+        title.getStyleClass().add("menu-title");
+        title.setAlignment(Pos.CENTER);
+        title.setMouseTransparent(true);
+
+        CellState[] colors = new CellState[] {
+            CellState.Green,
+            CellState.Blue,
+            CellState.Red,
+            CellState.Purple,
+            CellState.Orange,
+            CellState.Pink,
+            CellState.Yellow,
+            CellState.Cyan
+        };
+        int colorIndex = 0;
+
+        for (char character : "Connect Color".toCharArray()) {
+            Text letter = new Text(String.valueOf(character));
+            letter.getStyleClass().add("menu-title-letter");
+            if (!Character.isWhitespace(character)) {
+                letter.setFill(colors[colorIndex % colors.length].getColor());
+                colorIndex++;
+            }
+            title.getChildren().add(letter);
+        }
+
+        return title;
     }
 
     private void startDifficulty(Difficulty difficulty) {
@@ -253,7 +289,8 @@ public class App extends Application {
                     cell.isFixed() ? cell.getSolutionState() : cell.getPlayerState(),
                     cell.isFixed(),
                     dirs[0],
-                    dirs[1]
+                    dirs[1],
+                    board.getFinishedPathColor(row, col)
                 );
             }
         }
