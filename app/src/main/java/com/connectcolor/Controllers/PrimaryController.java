@@ -144,6 +144,13 @@ public class PrimaryController implements BoardListener{
         stopDrawing();
     }
 
+    public void useHint() {
+        stopDrawing();
+        if (board.applyRandomHint() && board.isSolved() && onPuzzleSolved != null) {
+            onPuzzleSolved.run();
+        }
+    }
+
     private void stopDrawing() {
         activeColor = null;
         dragging = false;

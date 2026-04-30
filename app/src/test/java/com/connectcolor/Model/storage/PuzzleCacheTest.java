@@ -36,13 +36,14 @@ class PuzzleCacheTest {
         assertEquals(1, loaded.get().getLevel());
         assertEquals(LevelSeed.forLevel(Difficulty.EASY, 1), loaded.get().getSeed());
         assertEquals(5, loaded.get().getEndpointPairs().size());
+        assertEquals(5, loaded.get().getSolutionPaths().size());
     }
 
     @Test
     void rejectsWrongVersion() throws IOException {
         PuzzleCache cache = new PuzzleCache(tempDir);
         cache.save(Difficulty.EASY, 1, easyPuzzle(1));
-        replaceInCacheFile("version=1", "version=0");
+        replaceInCacheFile("version=2", "version=1");
 
         assertFalse(cache.load(Difficulty.EASY, 1).isPresent());
     }
@@ -57,6 +58,15 @@ class PuzzleCacheTest {
 
         cache.save(Difficulty.EASY, 1, easyPuzzle(1));
         replaceInCacheFile("pairs=5", "pairs=4");
+
+        assertFalse(cache.load(Difficulty.EASY, 1).isPresent());
+    }
+
+    @Test
+    void rejectsMalformedSolutionData() throws IOException {
+        PuzzleCache cache = new PuzzleCache(tempDir);
+        cache.save(Difficulty.EASY, 1, easyPuzzle(1));
+        replaceInCacheFile("solution.0=0,0;0,1;0,2;0,3;0,4;0,5", "solution.0=0,0;2,2;0,5");
 
         assertFalse(cache.load(Difficulty.EASY, 1).isPresent());
     }
@@ -79,6 +89,8 @@ class PuzzleCacheTest {
         assertEquals(10, board.getFixedCells().size());
         assertEquals(CellState.White, board.getCell(0, 0).getSolutionState());
         assertEquals(CellState.White, board.getCell(0, 5).getSolutionState());
+        assertTrue(board.applyHint(CellState.White));
+        assertEquals(CellState.White, board.getFinishedPathColor(0, 3));
     }
 
     private CachedPuzzle easyPuzzle(int level) {
@@ -90,12 +102,31 @@ class PuzzleCacheTest {
             new EndpointPair(3, 3, 0, 3, 5),
             new EndpointPair(4, 4, 0, 4, 5)
         );
+        List<List<int[]>> solutionPaths = List.of(
+            rowPath(0),
+            rowPath(1),
+            rowPath(2),
+            rowPath(3),
+            rowPath(4)
+        );
         return new CachedPuzzle(
             Difficulty.EASY,
             level,
             LevelSeed.forLevel(Difficulty.EASY, level),
             settings,
-            endpointPairs
+            endpointPairs,
+            solutionPaths
+        );
+    }
+
+    private List<int[]> rowPath(int row) {
+        return List.of(
+            new int[] { row, 0 },
+            new int[] { row, 1 },
+            new int[] { row, 2 },
+            new int[] { row, 3 },
+            new int[] { row, 4 },
+            new int[] { row, 5 }
         );
     }
 

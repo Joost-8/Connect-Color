@@ -43,6 +43,10 @@ public class Board {
         this(settings.getRows(), settings.getCols(), settings.getPairs(), null, endpointPairs);
     }
 
+    public Board(GameSettings settings, List<EndpointPair> endpointPairs, List<List<int[]>> solutionPaths) {
+        this(settings.getRows(), settings.getCols(), settings.getPairs(), null, endpointPairs, solutionPaths);
+    }
+
     public Board(int rows, int cols, int pairs) {
         this(rows, cols, pairs, null, null);
     }
@@ -52,6 +56,16 @@ public class Board {
     }
 
     private Board(int rows, int cols, int pairs, Long seed, List<EndpointPair> endpointPairs) {
+        this(rows, cols, pairs, seed, endpointPairs, null);
+    }
+
+    private Board(
+            int rows,
+            int cols,
+            int pairs,
+            Long seed,
+            List<EndpointPair> endpointPairs,
+            List<List<int[]>> solutionCoordinates) {
         this.rows = rows;
         this.cols = cols;
         this.grid = new Cell[rows][cols];
@@ -67,7 +81,7 @@ public class Board {
         if (endpointPairs == null) {
             setBoard();
         } else {
-            setBoard(endpointPairs);
+            setBoard(endpointPairs, solutionCoordinates);
         }
 
     }
@@ -252,7 +266,8 @@ public class Board {
         long seed = puzzleSeed != null ? puzzleSeed : rng.nextLong();
         Grid puzzle = NumberlinkGenerator.generateUnique(cols, rows, seed, pairs);
         List<EndpointPair> endpointPairs = NumberlinkGenerator.extractEndpointPairs(puzzle);
-        placeEndpointPairs(endpointPairs);
+        List<List<int[]>> solutionCoordinates = NumberlinkGenerator.extractSolutionPaths(puzzle);
+        placeEndpointPairs(endpointPairs, solutionCoordinates);
     }
 
     private void clearPlayerProgress() {
@@ -323,8 +338,12 @@ public class Board {
     }
 
     public void setBoard(List<EndpointPair> endpointPairs) {
+        setBoard(endpointPairs, null);
+    }
+
+    public void setBoard(List<EndpointPair> endpointPairs, List<List<int[]>> solutionCoordinates) {
         prepareForNewBoard();
-        placeEndpointPairs(endpointPairs);
+        placeEndpointPairs(endpointPairs, solutionCoordinates);
     }
 
     private void prepareForNewBoard() {
@@ -342,7 +361,7 @@ public class Board {
         }
     }
 
-    private void placeEndpointPairs(List<EndpointPair> endpointPairs) {
+    private void placeEndpointPairs(List<EndpointPair> endpointPairs, List<List<int[]>> solutionCoordinates) {
         int availableColors = CellState.getColorStates().size();
         if (endpointPairs.size() > availableColors) {
             throw new IllegalStateException(
@@ -378,8 +397,57 @@ public class Board {
             }
         }
 
+        storeSolutionPaths(solutionCoordinates);
+
         // update pair count to match generated puzzle
         this.pairs = colorIdx;
+    }
+
+    private void storeSolutionPaths(List<List<int[]>> solutionCoordinates) {
+        solutionPaths.clear();
+        if (solutionCoordinates == null || solutionCoordinates.isEmpty()) {
+            return;
+        }
+        if (solutionCoordinates.size() != pairs) {
+            throw new IllegalStateException(
+                "Generated solution path count=" + solutionCoordinates.size()
+                + ", expected=" + pairs
+            );
+        }
+
+        List<CellState> colors = CellState.getColorStates();
+        for (int i = 0; i < solutionCoordinates.size(); i++) {
+            CellState color = colors.get(i);
+            List<int[]> coordinates = solutionCoordinates.get(i);
+            List<Cell> path = new ArrayList<>();
+
+            for (int[] coordinate : coordinates) {
+                if (coordinate == null || coordinate.length != 2) {
+                    throw new IllegalStateException("Invalid solution coordinate");
+                }
+
+                int row = coordinate[0];
+                int col = coordinate[1];
+                if (!isInBounds(row, col)) {
+                    throw new IllegalStateException("Solution coordinate out of bounds");
+                }
+
+                Cell cell = getCell(row, col);
+                if (cell.isFixed() && cell.getSolutionState() != color) {
+                    throw new IllegalStateException("Solution path crosses another endpoint");
+                }
+                if (!path.isEmpty()) {
+                    Cell previous = path.get(path.size() - 1);
+                    if (!areOrthogonalNeighbors(previous.getRow(), previous.getCol(), row, col)) {
+                        throw new IllegalStateException("Solution path contains non-adjacent cells");
+                    }
+                }
+
+                path.add(cell);
+            }
+
+            solutionPaths.put(color, path);
+        }
     }
 
     private CellState colorForIndex(int idx) {
@@ -506,6 +574,96 @@ public class Board {
     public boolean hasDrawnPath(CellState color) {
         ArrayList<Cell> path = playerPaths.get(color);
         return path != null && path.size() > 1;
+    }
+
+    public boolean applyRandomHint() {
+        List<CellState> candidates = new ArrayList<>();
+        for (CellState color : CellState.getColorStates()) {
+            if (!finishedColors.contains(color)
+                    && solutionPaths.containsKey(color)
+                    && !solutionPaths.get(color).isEmpty()) {
+                candidates.add(color);
+            }
+        }
+
+        if (candidates.isEmpty()) {
+            return false;
+        }
+
+        CellState color = candidates.get(rng.nextInt(candidates.size()));
+        return applyHint(color);
+    }
+
+    public boolean applyHint(CellState color) {
+        if (color == null || color == CellState.Empty || finishedColors.contains(color)) {
+            return false;
+        }
+
+        List<Cell> solutionPath = solutionPaths.get(color);
+        if (solutionPath == null || solutionPath.size() < 2) {
+            return false;
+        }
+
+        Set<Cell> solutionCells = new HashSet<>(solutionPath);
+        Set<CellState> colorsToClear = new HashSet<>();
+        colorsToClear.add(color);
+
+        for (Map.Entry<CellState, ArrayList<Cell>> entry : playerPaths.entrySet()) {
+            CellState pathColor = entry.getKey();
+            if (pathColor == color) {
+                continue;
+            }
+
+            ArrayList<Cell> path = entry.getValue();
+            if (path == null) {
+                continue;
+            }
+
+            for (Cell cell : path) {
+                if (!cell.isFixed() && solutionCells.contains(cell)) {
+                    colorsToClear.add(pathColor);
+                    break;
+                }
+            }
+        }
+
+        Set<Cell> dirtyCells = new HashSet<>();
+        for (CellState colorToClear : colorsToClear) {
+            clearPlayerPath(colorToClear, dirtyCells);
+        }
+
+        ArrayList<Cell> hintedPath = new ArrayList<>(solutionPath);
+        for (Cell cell : hintedPath) {
+            if (!cell.isFixed()) {
+                cell.setPlayerState(color);
+            }
+            dirtyCells.add(cell);
+        }
+
+        playerPaths.put(color, hintedPath);
+        finishedColors.add(color);
+
+        for (Cell cell : dirtyCells) {
+            notifyPathCell(cell);
+        }
+
+        return true;
+    }
+
+    private void clearPlayerPath(CellState color, Set<Cell> dirtyCells) {
+        ArrayList<Cell> path = playerPaths.get(color);
+        if (path != null) {
+            for (Cell cell : path) {
+                if (!cell.isFixed()) {
+                    cell.setPlayerState(CellState.Empty);
+                }
+                dirtyCells.add(cell);
+            }
+            path.clear();
+        }
+
+        playerPaths.put(color, new ArrayList<>());
+        finishedColors.remove(color);
     }
 
     public boolean isFinishedPathCell(int row, int col) {

@@ -95,7 +95,8 @@ public class PuzzlePreloader {
             settings.getPairs()
         );
         List<EndpointPair> endpointPairs = NumberlinkGenerator.extractEndpointPairs(puzzle);
-        return new CachedPuzzle(difficulty, level, seed, settings, endpointPairs);
+        List<List<int[]>> solutionPaths = NumberlinkGenerator.extractSolutionPaths(puzzle);
+        return new CachedPuzzle(difficulty, level, seed, settings, endpointPairs, solutionPaths);
     }
 
     private static String key(Difficulty difficulty, int level) {

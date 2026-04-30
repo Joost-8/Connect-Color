@@ -19,12 +19,12 @@ import com.connectcolor.Util.GameSettings;
 import com.connectcolor.Util.LevelSeed;
 
 public class PuzzleCache {
-    private static final int VERSION = 1;
+    private static final int VERSION = 2;
 
     private final Path root;
 
     public PuzzleCache() {
-        this(Paths.get(System.getProperty("user.home"), ".connect-color", "puzzles", "v1"));
+        this(Paths.get(System.getProperty("user.home"), ".connect-color", "puzzles", "v2"));
     }
 
     public PuzzleCache(Path root) {
@@ -50,6 +50,7 @@ public class PuzzleCache {
         Properties properties = new Properties();
         GameSettings settings = puzzle.getSettings();
         List<EndpointPair> endpointPairs = puzzle.getEndpointPairs();
+        List<List<int[]>> solutionPaths = puzzle.getSolutionPaths();
 
         properties.setProperty("version", Integer.toString(VERSION));
         properties.setProperty("difficulty", difficulty.getKey());
@@ -60,6 +61,7 @@ public class PuzzleCache {
         properties.setProperty("cellSize", Integer.toString(settings.getCellSize()));
         properties.setProperty("seed", Long.toString(puzzle.getSeed()));
         properties.setProperty("endpoint.count", Integer.toString(endpointPairs.size()));
+        properties.setProperty("solution.count", Integer.toString(solutionPaths.size()));
 
         for (int i = 0; i < endpointPairs.size(); i++) {
             EndpointPair pair = endpointPairs.get(i);
@@ -68,6 +70,10 @@ public class PuzzleCache {
                 pair.getStartRow() + "," + pair.getStartCol() + ","
                 + pair.getEndRow() + "," + pair.getEndCol()
             );
+        }
+
+        for (int i = 0; i < solutionPaths.size(); i++) {
+            properties.setProperty("solution." + i, encodePath(solutionPaths.get(i)));
         }
 
         try {
@@ -91,6 +97,7 @@ public class PuzzleCache {
         int cellSize = readInt(properties, "cellSize");
         long seed = readLong(properties, "seed");
         int endpointCount = readInt(properties, "endpoint.count");
+        int solutionCount = readInt(properties, "solution.count");
 
         if (version != VERSION
                 || !difficulty.getKey().equals(difficultyKey)
@@ -100,7 +107,8 @@ public class PuzzleCache {
                 || pairs != settings.getPairs()
                 || cellSize != settings.getCellSize()
                 || seed != LevelSeed.forLevel(difficulty, level)
-                || endpointCount != settings.getPairs()) {
+                || endpointCount != settings.getPairs()
+                || solutionCount != endpointCount) {
             return Optional.empty();
         }
 
@@ -138,7 +146,21 @@ public class PuzzleCache {
             endpointPairs.add(new EndpointPair(i, startRow, startCol, endRow, endCol));
         }
 
-        return Optional.of(new CachedPuzzle(difficulty, level, seed, settings, endpointPairs));
+        List<List<int[]>> solutionPaths = new ArrayList<>();
+        for (int i = 0; i < solutionCount; i++) {
+            String raw = properties.getProperty("solution." + i);
+            if (raw == null || raw.isBlank()) {
+                return Optional.empty();
+            }
+
+            List<int[]> path = decodePath(raw);
+            if (!isValidSolutionPath(path, endpointPairs.get(i), rows, cols)) {
+                return Optional.empty();
+            }
+            solutionPaths.add(path);
+        }
+
+        return Optional.of(new CachedPuzzle(difficulty, level, seed, settings, endpointPairs, solutionPaths));
     }
 
     private Path fileFor(Difficulty difficulty, int level) {
@@ -166,5 +188,68 @@ public class PuzzleCache {
             throw new IllegalArgumentException("Missing long value");
         }
         return Long.parseLong(value.trim());
+    }
+
+    private static String encodePath(List<int[]> path) {
+        StringBuilder encoded = new StringBuilder();
+        for (int i = 0; i < path.size(); i++) {
+            if (i > 0) {
+                encoded.append(';');
+            }
+            int[] coordinate = path.get(i);
+            encoded.append(coordinate[0]).append(',').append(coordinate[1]);
+        }
+        return encoded.toString();
+    }
+
+    private static List<int[]> decodePath(String rawPath) {
+        List<int[]> path = new ArrayList<>();
+        String[] coordinates = rawPath.split(";");
+        for (String rawCoordinate : coordinates) {
+            String[] parts = rawCoordinate.split(",");
+            if (parts.length != 2) {
+                throw new IllegalArgumentException("Invalid coordinate");
+            }
+            path.add(new int[] { parseInt(parts[0]), parseInt(parts[1]) });
+        }
+        return path;
+    }
+
+    private static boolean isValidSolutionPath(List<int[]> path, EndpointPair pair, int rows, int cols) {
+        if (path.size() < 2) {
+            return false;
+        }
+
+        int[] first = path.get(0);
+        int[] last = path.get(path.size() - 1);
+        if (first[0] != pair.getStartRow()
+                || first[1] != pair.getStartCol()
+                || last[0] != pair.getEndRow()
+                || last[1] != pair.getEndCol()) {
+            return false;
+        }
+
+        Set<Integer> seen = new HashSet<>();
+        for (int i = 0; i < path.size(); i++) {
+            int[] coordinate = path.get(i);
+            if (!inBounds(coordinate[0], coordinate[1], rows, cols)) {
+                return false;
+            }
+
+            int id = coordinate[0] * cols + coordinate[1];
+            if (!seen.add(id)) {
+                return false;
+            }
+
+            if (i > 0) {
+                int[] previous = path.get(i - 1);
+                int distance = Math.abs(coordinate[0] - previous[0]) + Math.abs(coordinate[1] - previous[1]);
+                if (distance != 1) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
     }
 }

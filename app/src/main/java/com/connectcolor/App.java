@@ -163,7 +163,7 @@ public class App extends Application {
         loadLevel(currentDifficulty);
     }
 
-    private HBox createGameTopBar() {
+    private BorderPane createGameTopBar(PrimaryController controller, BoardPanel boardPanel) {
         Button backButton = new Button("Back");
         backButton.getStyleClass().add("back-button");
         backButton.setFocusTraversable(false);
@@ -172,10 +172,24 @@ public class App extends Application {
         levelLabel = new Label();
         levelLabel.getStyleClass().add("level-label");
 
-        HBox topBar = new HBox(14, backButton, levelLabel);
+        Button hintButton = new Button("\uD83D\uDCA1");
+        hintButton.getStyleClass().add("hint-button");
+        hintButton.setFocusTraversable(false);
+        hintButton.setAccessibleText("Hint");
+        hintButton.setOnAction(e -> {
+            controller.useHint();
+            Platform.runLater(boardPanel::requestFocus);
+        });
+
+        BorderPane topBar = new BorderPane();
         topBar.getStyleClass().add("top-bar");
-        topBar.setAlignment(Pos.CENTER);
         topBar.setPadding(new Insets(10, 14, 10, 14));
+        topBar.setLeft(backButton);
+        topBar.setCenter(levelLabel);
+        topBar.setRight(hintButton);
+        BorderPane.setAlignment(backButton, Pos.CENTER_LEFT);
+        BorderPane.setAlignment(levelLabel, Pos.CENTER);
+        BorderPane.setAlignment(hintButton, Pos.CENTER_RIGHT);
         return topBar;
     }
 
@@ -222,7 +236,7 @@ public class App extends Application {
 
         repaintBoard(board, boardPanel, settings);
 
-        root.setTop(createGameTopBar());
+        root.setTop(createGameTopBar(controller, boardPanel));
         root.setCenter(boardPanel);
         root.setPrefSize(settings.getSceneWidth(), settings.getSceneHeight() + 48);
         updateTopBar();

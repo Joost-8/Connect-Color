@@ -78,12 +78,31 @@ class PuzzlePreloaderTest {
             new EndpointPair(3, 3, 0, 3, 5),
             new EndpointPair(4, 4, 0, 4, 5)
         );
+        List<List<int[]>> solutionPaths = List.of(
+            rowPath(0),
+            rowPath(1),
+            rowPath(2),
+            rowPath(3),
+            rowPath(4)
+        );
         return new CachedPuzzle(
             Difficulty.EASY,
             level,
             LevelSeed.forLevel(Difficulty.EASY, level),
             settings,
-            endpointPairs
+            endpointPairs,
+            solutionPaths
+        );
+    }
+
+    private List<int[]> rowPath(int row) {
+        return List.of(
+            new int[] { row, 0 },
+            new int[] { row, 1 },
+            new int[] { row, 2 },
+            new int[] { row, 3 },
+            new int[] { row, 4 },
+            new int[] { row, 5 }
         );
     }
 }

@@ -284,6 +284,95 @@ public final class NumberlinkGenerator {
         return pairs;
     }
 
+    public static List<List<int[]>> extractSolutionPaths(Grid puzzle) {
+        TubeResult tr = puzzle.makeTubes();
+        Grid tubeGrid = tr.getTube();
+        UnionFind uf = tr.getUF();
+        List<EndpointPair> endpointPairs = extractEndpointPairs(puzzle);
+        List<List<int[]>> solutionPaths = new ArrayList<>();
+
+        for (EndpointPair pair : endpointPairs) {
+            solutionPaths.add(traceSolutionPath(puzzle, tubeGrid, uf, pair));
+        }
+
+        return solutionPaths;
+    }
+
+    private static List<int[]> traceSolutionPath(Grid puzzle, Grid tubeGrid, UnionFind uf, EndpointPair pair) {
+        int startId = id(pair.getStartCol(), pair.getStartRow(), puzzle.w);
+        int endId = id(pair.getEndCol(), pair.getEndRow(), puzzle.w);
+        int root = uf.find(startId);
+
+        if (uf.find(endId) != root) {
+            throw new IllegalStateException("Endpoint pair is not connected");
+        }
+
+        List<int[]> path = new ArrayList<>();
+        boolean[] visited = new boolean[puzzle.w * puzzle.h];
+        int previous = -1;
+        int current = startId;
+
+        while (true) {
+            visited[current] = true;
+            path.add(new int[] { current / puzzle.w, current % puzzle.w });
+
+            if (current == endId) {
+                return path;
+            }
+
+            int next = nextPathCell(puzzle, tubeGrid, uf, root, current, previous, visited, endId);
+            if (next == -1) {
+                throw new IllegalStateException("Could not trace solution path");
+            }
+
+            previous = current;
+            current = next;
+        }
+    }
+
+    private static int nextPathCell(
+            Grid puzzle,
+            Grid tubeGrid,
+            UnionFind uf,
+            int root,
+            int current,
+            int previous,
+            boolean[] visited,
+            int endId) {
+
+        int row = current / puzzle.w;
+        int col = current % puzzle.w;
+        int[][] dirs = {
+            {-1, 0},
+            {1, 0},
+            {0, -1},
+            {0, 1}
+        };
+
+        for (int[] dir : dirs) {
+            int nextRow = row + dir[0];
+            int nextCol = col + dir[1];
+            if (nextRow < 0 || nextRow >= puzzle.h || nextCol < 0 || nextCol >= puzzle.w) {
+                continue;
+            }
+
+            int next = id(nextCol, nextRow, puzzle.w);
+            if (next == previous || uf.find(next) != root) {
+                continue;
+            }
+            if (visited[next] && next != endId) {
+                continue;
+            }
+            if (tubeGrid.get(nextCol, nextRow) == ' ') {
+                continue;
+            }
+
+            return next;
+        }
+
+        return -1;
+    }
+
     /**
      * Port of Python make(w,h,mitm,min_numbers,max_numbers).
      * Returns the SHRUNK grid (size w×h) with endpoints/turn markers.

@@ -30,7 +30,8 @@
 }
 
 .menu-button,
-.back-button {
+.back-button,
+.hint-button {
     -fx-background-color: #242424;
     -fx-border-color: #555555;
     -fx-border-radius: 4;
@@ -42,13 +43,23 @@
     -fx-cursor: hand;
 }
 
+.hint-button {
+    -fx-min-width: 42;
+    -fx-min-height: 42;
+    -fx-pref-width: 42;
+    -fx-pref-height: 42;
+    -fx-font-size: 17;
+    -fx-padding: 6;
+}
+
 .menu-button {
     -fx-min-width: 260;
     -fx-pref-height: 46;
 }
 
 .menu-button:hover,
-.back-button:hover {
+.back-button:hover,
+.hint-button:hover {
     -fx-background-color: #333333;
     -fx-border-color: #888888;
 }

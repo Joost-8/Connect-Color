@@ -108,6 +108,33 @@ class NumberlinkSolverTest {
     }
 
     @Test
+    void extractedSolutionPathsAlignWithEndpointPairs() {
+        Grid puzzle = NumberlinkGenerator.generateUnique(6, 6, 1234L, 20, 1_000_000L, 1_000L);
+        List<EndpointPair> pairs = NumberlinkGenerator.extractEndpointPairs(puzzle);
+        List<List<int[]>> solutionPaths = NumberlinkGenerator.extractSolutionPaths(puzzle);
+
+        assertEquals(pairs.size(), solutionPaths.size());
+        for (int i = 0; i < pairs.size(); i++) {
+            EndpointPair pair = pairs.get(i);
+            List<int[]> path = solutionPaths.get(i);
+            int[] first = path.get(0);
+            int[] last = path.get(path.size() - 1);
+
+            assertEquals(pair.getStartRow(), first[0]);
+            assertEquals(pair.getStartCol(), first[1]);
+            assertEquals(pair.getEndRow(), last[0]);
+            assertEquals(pair.getEndCol(), last[1]);
+
+            for (int step = 1; step < path.size(); step++) {
+                int[] previous = path.get(step - 1);
+                int[] current = path.get(step);
+                int distance = Math.abs(previous[0] - current[0]) + Math.abs(previous[1] - current[1]);
+                assertEquals(1, distance);
+            }
+        }
+    }
+
+    @Test
     void mediumUniqueGeneratorReturnsPuzzleWithOneSolution() {
         Grid puzzle = NumberlinkGenerator.generateUnique(8, 8, 1234L, 20, 1_000_000L, 1_000L);
         List<EndpointPair> pairs = NumberlinkGenerator.extractEndpointPairs(puzzle);
